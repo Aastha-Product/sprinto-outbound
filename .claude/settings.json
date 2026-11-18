@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./credentials.json)",
+      "Read(./token.json)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(rm -rf:*)",
+      "Bash(Remove-Item -Recurse:*)",
+      "Bash(pip install --user:*)"
+    ],
+    "ask": [
+      "Bash(python -m outbound.cli --send:*)",
+      "Bash(python scripts/gmail_auth.py:*)"
+    ]
+  }
+}

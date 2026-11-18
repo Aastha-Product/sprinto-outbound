@@ -1,0 +1,19 @@
+# One domain per line. Lines starting with # are ignored.
+# This is a deliberately MIXED seed list. My guesses are in comments; the pipeline must decide on its own
+# and you should check whether it agrees. Hunter is only spent on companies that qualify.
+
+# Likely fits (B2B SaaS, roughly Series A–C, selling to mid-market/enterprise)
+rocketlane.com
+spotdraft.com
+hevodata.com
+spendflo.com
+airmeet.com
+
+# Edge cases (good for your defense)
+getastra.com          # security SaaS; listed publicly as a Sprinto customer → should be rejected
+vanta.com             # direct competitor → hard disqualify
+
+# Likely rejects
+salesforce.com        # public, far too large
+stripe.com            # late-stage, mature compliance program
+thesouledstore.com    # D2C apparel, not B2B software

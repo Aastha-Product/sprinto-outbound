@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprinto Outbound</title>
+  <style>
+    :root { --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --card: #f5f5f4; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #161616; --fg: #ececec; --muted: #9a9a9a; --card: #222; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
+    .card { background: var(--card); border-radius: 10px; padding: 16px; margin-top: 24px; }
+    code, pre { font-family: ui-monospace, monospace; font-size: 14px; }
+    p.muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Sprinto Outbound</h1>
+  <p>Automated cold-outreach pipeline: scrape → extract → qualify (agent loop) → find contact → pain points → draft → send.</p>
+  <p class="muted">MESA School of Business, Term 2, AI Case 2. The full interface arrives in a later build phase.</p>
+  <div class="card">
+    <strong>Service status</strong>
+    <pre id="health">checking…</pre>
+  </div>
+</main>
+<script>
+  fetch("/api/health")
+    .then(r => r.json())
+    .then(d => { document.getElementById("health").textContent = JSON.stringify(d, null, 2); })
+    .catch(() => { document.getElementById("health").textContent = "could not reach /api/health"; });
+</script>
+</body>
+</html>

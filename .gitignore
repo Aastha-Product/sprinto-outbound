@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+*.pem
+
+# course material (not ours to publish in a public repo)
+docs/MESA_Case_02.pdf
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# outputs & caches (may contain real people's names/emails from Hunter)
+runs/
+.cache/
+
+# vercel
+.vercel/
+
+# editor / OS
+.vscode/settings.json
+.DS_Store
+Thumbs.db
