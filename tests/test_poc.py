@@ -41,7 +41,7 @@ def test_small_company_prefers_cto_with_good_confidence():
     names = [c.first_name for c, _ in ranked]
     assert names[0] == "Alex"  # CTO, confidence 92
     assert names.index("Sam") > names.index("Alex")  # CTO but confidence 60 < 70
-    assert names[-1] == "Pat"  # Head of Marketing only matches the last-resort "any executive" tier
+    assert "Pat" not in names  # Head of Marketing: executive, but marketing isn't a department that owns compliance
     assert None not in names  # never a contact without a first name
 
 
@@ -55,6 +55,31 @@ def test_bigger_company_prefers_vp_eng_over_ceo():
     ranked = rank_contacts(parse_contacts(SEARCH), CompanyProfile(employee_range="200-500"), load_icp())
     assert ranked[0][0].first_name in ("Dev", "Alex")
     assert [c.first_name for c, _ in ranked].index("Maria") > 1
+
+
+def test_mid_size_ceo_matches_founder_tier_not_last_resort():
+    ranked = rank_contacts(parse_contacts(SEARCH), CompanyProfile(employee_range="190+"), load_icp())
+    tiers = {c.first_name: t for c, t in ranked}
+    assert tiers["Maria"].title == "Co-founder / CEO" and tiers["Maria"].priority == 4
+    assert "Pat" not in tiers
+
+
+def test_relevance_beats_confidence():
+    # Sam (CTO, confidence 60) still outranks Maria (CEO, 88) at a small company: relevance first, confidence second
+    ranked = [c.first_name for c, _ in rank_contacts(parse_contacts(SEARCH), CompanyProfile(employee_range="51-200"), load_icp())]
+    assert ranked.index("Sam") < ranked.index("Maria")
+
+
+def test_only_irrelevant_executives_means_no_poc(monkeypatch):
+    from outbound import poc as poc_mod
+    from outbound.poc import TitlePick
+
+    only_marketing = {"data": {"emails": [{"value": "pat@acme.io", "first_name": "Pat", "position": "Head of Marketing",
+                                           "seniority": "executive", "department": "marketing", "confidence": 99}]}}
+    monkeypatch.setattr(poc_mod.llm, "generate_json", lambda *a, **k: TitlePick(index=-1, why="marketing does not own compliance"))
+    client, _ = fake_hunter(search=only_marketing)
+    result, _ = find_poc("acme.io", CompanyProfile(), settings(), MemoryStore(), client=client)
+    assert result.status == "no_poc" and result.chosen is None
 
 
 def test_find_poc_spends_one_credit_then_uses_cache():

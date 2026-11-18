@@ -41,3 +41,16 @@ When a critical fact is missing, the loop fetches **/careers first** (rung one f
 - **"Two of three answered, one unknown: qualify, drop, or flag?"** Today: a critical unknown (stage or gap) →
   `insufficient_data`, no Hunter credit spent, listed for a human. The lecture's map suggests "qualify at lower rank,
   flagged" for an unknown stage. That's an owner decision; see `OWNER_CHECKLIST.md` section H.
+- **Stage is the current round, recency is a bonus.** STAGE_SERIES (+10) asks what stage the company is at now (a 2024
+  Series A company is still Series A); STAGE_RECENT_FUNDING (+5) rewards a round inside the 24-month window, checked in
+  Python from the round's date.
+
+## Source policy (L4: "just because it's public doesn't mean it's free to take")
+| Concern | What this build does |
+|---|---|
+| **Legal / terms of service** | Reads only public marketing pages (home, pricing, security, customers, about, careers, press). Never logs in, never creates an account, never clicks through a user agreement, never solves a CAPTCHA, never retries a bot wall (the hiQ lesson: the liability came from the clicked-through agreement). Sites whose terms forbid automated access should be added to a skip list by the owner before a run. |
+| **robots.txt** | Checked for every page; disallowed pages are skipped and recorded as `skipped: disallowed by robots.txt`. |
+| **Load on their servers** | 1 request per second per site, at most 6 pages + 3 agent fetches, a 7-day page cache and a 14-day answer cache, so the same site isn't fetched again for a week. |
+| **Privacy (GDPR, DPDP)** | The only personal data is a business contact from Hunter.io (name, title, work email), fetched only for qualified companies. Emails never leave the owner's inbox; the website masks every email address and hides contact names behind an eye icon. No personal data is scraped from websites. |
+| **Ownership** | Scraped text is used only to make a qualification decision and is quoted briefly as evidence. Nothing is republished or sold; run data stays in the owner's Neon database. |
+| **Data providers first** (L4: "scraping is a last resort") | Contacts come from Hunter's API, not scraping. Company facts have no free API, so the build scrapes public pages and uses Google Search grounding for facts the site doesn't state. |

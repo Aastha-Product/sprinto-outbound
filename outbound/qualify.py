@@ -291,8 +291,8 @@ def clean_signals(raw: list[Signal], ctx: QualifyContext) -> list[Signal]:
                                         detail=f"can't confirm: {b.url} exists but could not be read ({page_problem(b)})")
 
     # Deterministic: the funding round must be inside the ICP.md window (the model reads "about 24 months" loosely).
-    if "STAGE_FUNDING" in by_id and "funding_window_months" in ctx.icp.settings:
-        by_id["STAGE_FUNDING"] = apply_funding_window(by_id["STAGE_FUNDING"], ctx.icp.settings["funding_window_months"])
+    if "STAGE_RECENT_FUNDING" in by_id and "funding_window_months" in ctx.icp.settings:
+        by_id["STAGE_RECENT_FUNDING"] = apply_funding_window(by_id["STAGE_RECENT_FUNDING"], ctx.icp.settings["funding_window_months"])
 
     # Deterministic: a competitor link/badge found by the scraper always counts for the penalty rule.
     comp_hits = [d for d in ctx.scrape.detected_signals if d.signal.startswith(("competitor_link:", "competitor_text:"))]

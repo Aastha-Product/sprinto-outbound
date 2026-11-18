@@ -62,7 +62,7 @@ def draft_email(contact: Contact, profile: CompanyProfile, qualification: Qualif
         "position": contact.position or "leader",
         "company": profile.name or "your company",
         "hooks": "\n".join(f"- {e.claim} | source: {e.source_url} | quote: \"{e.quote}\"" for e in hooks) or "(none)",
-        "pain_points": "\n".join(f"- {p.title}: {p.why_this_person}" for p in pains) or "(none)",
+        "pain_points": "\n".join(f"- [{p.kind.upper()}] {p.title}: {p.why_this_person}" for p in pains) or "(none)",
         "max_words": MAX_BODY_WORDS,
         "max_subject_words": MAX_SUBJECT_WORDS,
         "feedback": "",

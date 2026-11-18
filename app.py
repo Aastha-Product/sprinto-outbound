@@ -27,7 +27,7 @@ from outbound.config import get_settings
 from outbound.domains import parse_domains
 from outbound.llm import LLMFatalError
 from outbound.pipeline import STEP_TITLES, DomainRunner, RunOptions, new_run_id
-from outbound.report import summary_rows, write_reports
+from outbound.report import decision_brief, summary_rows, write_reports
 from outbound.storage import get_store, ping_database
 
 app = FastAPI(title="Sprinto Outbound", docs_url=None, redoc_url=None)
@@ -156,7 +156,13 @@ def run_step(run_id: str, body: StepRequest, request: Request) -> dict:
         outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions()).run_step(body.step)
     except LLMFatalError as exc:
         raise HTTPException(503, f"The AI service is unavailable for this site right now ({exc}).") from None
-    return {"step": outcome.step, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact)}
+    return {"step": outcome.step, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact),
+            "brief": domain_brief(run_id, body.domain)}
+
+
+def domain_brief(run_id: str, domain: str) -> dict:
+    """The decision brief (who / why now / evidence / what to say / uncertain) for one domain, emails masked."""
+    return mask(decision_brief(get_store().load_run(run_id).get(domain, {})))
 
 
 @app.post("/api/runs/{run_id}/send")
@@ -166,7 +172,8 @@ def send(run_id: str, body: SendRequest, request: Request) -> dict:
     if body.domain not in run_domains(run_id):
         raise HTTPException(400, "That domain is not part of this run.")
     outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions(send=True)).run_step(7)
-    return {"step": 7, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact)}
+    return {"step": 7, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact),
+            "brief": domain_brief(run_id, body.domain)}
 
 
 @app.get("/api/runs")
@@ -188,6 +195,7 @@ def get_run(run_id: str) -> dict:
         "run_id": run_id,
         "domains": domains,
         "artifacts": {d: {step: public_artifact(a) for step, a in run.get(d, {}).items()} for d in domains},
+        "briefs": {d: mask(decision_brief(run.get(d, {}))) for d in domains},
         "summary": mask(summary_rows(run)),
     }
 

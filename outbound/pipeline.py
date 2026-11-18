@@ -187,7 +187,7 @@ class DomainRunner:
         pains, notes = find_pain_points(poc.chosen, profile, qual, self._corpus())
         status = "done" if pains else "stopped"
         reasoning = (f"Pain points for {poc.chosen.first_name} ({poc.chosen.position}): "
-                     + "; ".join(f"{p.title}: {p.why_this_person}" for p in pains) + (" " + " ".join(notes) if notes else ""))
+                     + "; ".join(f"{p.title} [{p.kind}]: {p.why_this_person}" for p in pains) + (" " + " ".join(notes) if notes else ""))
         art = self._save(5, status, f"{poc.chosen.position} at {profile.name}", [p.model_dump(mode="json") for p in pains], reasoning.strip(),
                          [e for p in pains for e in p.evidence])
         return StepOutcome(5, status, reasoning, art)

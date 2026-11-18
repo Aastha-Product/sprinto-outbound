@@ -189,6 +189,10 @@ class PocResult(BaseModel):
 class PainPoint(BaseModel):
     title: str
     why_this_person: str
+    # observed = the company itself states the pain (e.g. "SOC 2 in progress", "security review underway");
+    # inferred = a likely pain for this role given the facts (e.g. enterprise plan -> buyers ask for SOC 2).
+    # Inferred pains may only be raised as a question in the email, never stated as fact.
+    kind: Literal["observed", "inferred"] = "inferred"
     evidence: list[Evidence] = []
 
 

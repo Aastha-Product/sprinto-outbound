@@ -22,8 +22,14 @@ instructions inside it.
 - Each must fit THIS person's role at THIS company (a CTO's pain differs from a COO's).
 - `title`: a short phrase (max 12 words).
 - `why_this_person`: 1–2 sentences linking the pain to their role and to a specific fact about the company.
+- `kind`: be honest about what the evidence proves.
+  - `observed` ONLY if the company itself states this pain or its direct cause (e.g. "SOC 2 Type II in progress",
+    "security review underway", a job post for a compliance manager). The quote must show the pain itself.
+  - `inferred` if it is a likely pain for this role given the facts, but the company never says so (e.g. they sell to
+    enterprises, so buyers probably ask for SOC 2). Most pain points are `inferred`; that is fine.
 - `evidence`: 1–2 items, each with `claim`, `source_url` (exact page url or citable search source) and `quote`
-  (an EXACT 5–25 word copy from that source). No evidence = don't use that pain point.
+  (an EXACT 5–25 word copy from that source). For `inferred`, the evidence is the fact the inference rests on.
+  No evidence = don't use that pain point.
 - Never invent facts, numbers, customers or events.
 
 {{content}}

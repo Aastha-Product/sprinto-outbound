@@ -107,7 +107,8 @@ checked and found nothing (e.g., no trust page).
 | GAP_ONE_FRAMEWORK | GAP | 8 | presence | Does the company hold exactly one of SOC 2 or ISO 27001 (room to add the second)? |
 | GAP_GDPR_ONLY | GAP | 8 | presence | Does the company mention GDPR but neither SOC 2 nor ISO 27001? |
 | GAP_QUESTIONNAIRE | GAP | 5 | presence | Does the company mention security questionnaires, security reviews or vendor assessments from its customers? |
-| STAGE_FUNDING | STAGE | 10 | presence | Did the company raise a Series A, B or C round within about the last 24 months? |
+| STAGE_SERIES | STAGE | 10 | presence | Is the company's latest disclosed funding round a Series A, B or C (no later round such as Series D+, and not publicly listed)? Answer by the round's name; its date does not matter here. |
+| STAGE_RECENT_FUNDING | STAGE | 5 | presence | Did the company raise a funding round recently? Quote the round with its date (month and year). |
 | STAGE_SIZE | STAGE | 5 | presence | Does the company have roughly 30–500 employees? |
 | HIRING_SECURITY | HIRING | 10 | presence | Is the company hiring for security, compliance, GRC, IT or DevSecOps roles? |
 | HIRING_ENT_SALES | HIRING | 5 | presence | Is the company hiring enterprise / mid-market account executives or sales roles? |
@@ -134,8 +135,11 @@ checked and found nothing (e.g., no trust page).
 | late_stage_min_employees | 2000 |
 | funding_window_months | 24 |
 
-- **Funding window (checked in Python, not by the model):** STAGE_FUNDING earns points only if its evidence shows the
-  round's date (month + year, or a year) and that date is within `funding_window_months` of the run date. A round
+- **Stage vs recency are separate questions.** A company whose latest round is a 2024 Series A is still a Series A
+  company: STAGE_SERIES (+10) asks *what stage it is now*. Recent funding is a buying-timing bonus: STAGE_RECENT_FUNDING
+  (+5). The STAGE row is still capped at 15 (Series 10 + recent 5 + size 5).
+- **Funding window (checked in Python, not by the model):** STAGE_RECENT_FUNDING earns points only if its evidence shows
+  the round's date (month + year, or a year) and that date is within `funding_window_months` of the run date. A round
   outside the window counts as `no`; a round with no visible date counts as `unknown` (0 points), because the window
   can't be checked. This keeps the rule identical for every company (e.g. a June 2024 round is 29 months old in Nov 2026).
 - Any disqualifier → `rejected`
@@ -151,10 +155,15 @@ Every point awarded must cite evidence `{claim, source_url, quote}`. No evidence
 
 ## Who is the right PoC (Step 4)
 Python ranks Hunter contacts by `Priority` (1 = best) for the company's size band, then by Hunter confidence.
-A title matches if it contains any of the keywords (whole words, case-insensitive). `seniority:executive` means
-Hunter's seniority field is "executive". If the employee count is unknown, the `1-149` band is used.
-Contacts without a first name are never chosen. Contacts with confidence below `min_confidence` rank after
-all contacts at the same priority that meet it.
+A title matches if it contains any of the keywords (whole words, case-insensitive). `seniority:executive in …` means
+Hunter's seniority field is "executive" **and** its department is one of the listed ones (so a VP of Marketing or
+Sales never becomes the contact). If the employee count is unknown, the `1-149` band is used.
+
+Two separate scores, never mixed: **relevance** (the priority below: does this role own the compliance purchase?) and
+**reliability** (Hunter's email confidence). Relevance always wins; confidence only breaks ties inside one priority,
+and contacts below `min_confidence` rank after those above it. Contacts without a first name are never chosen. If no
+contact matches any row, the LLM may interpret unusual titles against this table, and it must answer "nobody" when no
+one plausibly owns the decision; the result is then `no_poc`, never a random executive.
 
 | Size band | Priority | Title | Title keywords |
 |---|---|---|---|
@@ -164,8 +173,9 @@ all contacts at the same priority that meet it.
 | 150-100000 | 1 | CISO / Head of Security | ciso, chief information security officer, head of security, vp security, vp of security, director of security, security lead |
 | 150-100000 | 2 | VP Engineering / CTO | vp engineering, vp of engineering, vice president of engineering, head of engineering, cto, chief technology officer |
 | 150-100000 | 3 | Head of IT / Compliance | head of it, it director, director of it, vp it, head of compliance, compliance manager, compliance lead, grc |
-| any | 4 | Head of Ops / COO | coo, chief operating officer, head of operations, vp operations, vp of operations, director of operations |
-| any | 5 | Any executive in IT / management | seniority:executive |
+| 150-100000 | 4 | Co-founder / CEO | co founder, cofounder, founder, ceo, chief executive officer |
+| any | 5 | Head of Ops / COO | coo, chief operating officer, head of operations, vp operations, vp of operations, director of operations |
+| any | 6 | Any executive in IT / management | seniority:executive in executive it engineering security management operations |
 
 | Setting | Value |
 |---|---|

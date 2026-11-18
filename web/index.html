@@ -194,6 +194,19 @@
   @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .kv dd { margin-bottom: 8px; } }
   .send-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
 
+  .secret { display: inline-flex; align-items: center; gap: 6px; }
+  .secret-value { letter-spacing: .05em; }
+  .eye { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border-radius: 8px; border: 1px solid var(--sky-100);
+         background: var(--white); color: var(--sky-700); cursor: pointer; flex: none; }
+  .eye:hover { border-color: var(--sky-300); }
+  .brief { margin: 0 22px 16px; padding: 16px 18px; border-radius: var(--r-3xl); background: var(--sky-50); border: 1px solid var(--sky-100); }
+  .brief-title { margin: 0 0 8px; font: 900 12px var(--font); text-transform: uppercase; letter-spacing: .1em; color: var(--sky-700); }
+  .brief dl { margin: 0; display: grid; gap: 6px; }
+  .brief-row { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 4px 16px; font-size: 14px; }
+  .brief-row dt { color: var(--ink-500); font-weight: 800; } .brief-row dd { margin: 0; color: var(--ink-900); min-width: 0; overflow-wrap: anywhere; }
+  .brief-row ul.ev { margin: 0; }
+  @media (max-width: 560px) { .brief-row { grid-template-columns: 1fr; } }
+
   /* features */
   .features { display: grid; gap: 20px; }
   @media (min-width: 860px) { .features { grid-template-columns: repeat(3, 1fr); } }
@@ -272,6 +285,8 @@
   <symbol id="i-target" viewBox="0 0 256 256"><path fill="currentColor" d="M221.9 88.4a8 8 0 0 0-14.9 5.8 87.9 87.9 0 1 1-45.2-48.4 8 8 0 0 0 7-14.4 104.1 104.1 0 1 0 53.1 57ZM128 72a8 8 0 0 0 0-16 72 72 0 1 0 72 72 8 8 0 0 0-16 0 56 56 0 1 1-56-56Zm0 32a8 8 0 0 0 0-16 40 40 0 1 0 40 40 8 8 0 0 0-16 0 24 24 0 1 1-24-24Zm-5.7 29.7a8 8 0 0 0 11.4 0l56-56a8 8 0 0 0-11.4-11.4l-56 56a8 8 0 0 0 0 11.4Z"/></symbol>
   <symbol id="i-github" viewBox="0 0 256 256"><path fill="currentColor" d="M208.3 75.7A59.8 59.8 0 0 0 202.9 28a8 8 0 0 0-6.9-4 59.8 59.8 0 0 0-48 24h-24a59.8 59.8 0 0 0-48-24 8 8 0 0 0-6.9 4 59.8 59.8 0 0 0-5.4 47.7A58.1 58.1 0 0 0 56 104v8a56.1 56.1 0 0 0 48.4 55.5A39.8 39.8 0 0 0 96 192v8H72a24 24 0 0 1-24-24 40 40 0 0 0-40-40 8 8 0 0 0 0 16 24 24 0 0 1 24 24 40 40 0 0 0 40 40h24v16a8 8 0 0 0 16 0v-40a24 24 0 0 1 48 0v40a8 8 0 0 0 16 0v-40a39.8 39.8 0 0 0-8.4-24.5A56.1 56.1 0 0 0 216 112v-8a58.1 58.1 0 0 0-7.7-28.3Z"/></symbol>
   <symbol id="i-book" viewBox="0 0 256 256"><path fill="currentColor" d="M232 48h-64a32 32 0 0 0-32 32v87.4a8 8 0 0 1-16 0V80a32 32 0 0 0-32-32H24a8 8 0 0 0-8 8v144a8 8 0 0 0 8 8h72a24 24 0 0 1 24 24 8 8 0 0 0 16 0 24 24 0 0 1 24-24h72a8 8 0 0 0 8-8V56a8 8 0 0 0-8-8Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 256 256"><path fill="currentColor" d="M247.3 124.8c-.3-.8-8.8-19.6-27.6-38.5C194.6 61.3 162.9 48 128 48S61.4 61.3 36.3 86.3C17.5 105.2 9 124 8.7 124.8a8 8 0 0 0 0 6.5c.3.8 8.8 19.6 27.6 38.4C61.4 194.7 93.1 208 128 208s66.6-13.3 91.7-38.3c18.8-18.8 27.3-37.6 27.6-38.4a8 8 0 0 0 0-6.5ZM128 192c-30.8 0-57.7-11.2-79.9-33.3A130.3 130.3 0 0 1 25 128a130.3 130.3 0 0 1 23.1-30.8C70.3 75.2 97.2 64 128 64s57.7 11.2 79.9 33.2A130.3 130.3 0 0 1 231 128c-7.2 13.5-38.6 64-103 64Zm0-112a48 48 0 1 0 48 48 48 48 0 0 0-48-48Zm0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32Z"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 256 256"><path fill="currentColor" d="M53.9 34.6a8 8 0 0 0-11.8 10.8l19.2 21.1C25 88.8 9.4 123.2 8.7 124.8a8 8 0 0 0 0 6.5c.3.8 8.8 19.6 27.6 38.4C61.4 194.7 93.1 208 128 208a127.1 127.1 0 0 0 52.1-10.8l22 24.2a8 8 0 1 0 11.8-10.8Zm47.3 74.8 41.7 45.8a32 32 0 0 1-41.7-45.8ZM128 192c-30.8 0-57.7-11.2-79.9-33.3A130.3 130.3 0 0 1 25 128c4.7-8.8 19.8-33.5 47.3-49.4l18 19.8a48 48 0 0 0 63.7 70.1l14.7 16.2A112 112 0 0 1 128 192Zm119.3-60.8c-.4.9-10.5 23.3-33.4 43.8a8 8 0 1 1-10.6-11.9A131 131 0 0 0 231 128a130.3 130.3 0 0 0-23.1-30.8C185.7 75.2 158.8 64 128 64a118.3 118.3 0 0 0-19.4 1.6 8 8 0 1 1-2.6-15.8A134.3 134.3 0 0 1 128 48c34.9 0 66.6 13.3 91.7 38.3 18.8 18.9 27.3 37.7 27.6 38.5a8 8 0 0 1 0 6.4Z"/></symbol>
 </svg>
 
 <header class="nav">
@@ -485,7 +500,7 @@
 <script>
 const STEPS = {1: "Scrape", 2: "Extract", 3: "Qualify", 4: "Find contact", 5: "Pain points", 6: "Draft email", 7: "Send"};
 const FILES = {1: "01_scrape", 2: "02_extract", 3: "03_qualify", 4: "04_poc", 5: "05_pain", 6: "06_email", 7: "07_send"};
-let state = { runId: null, domains: [], artifacts: {}, running: {} };
+let state = { runId: null, domains: [], artifacts: {}, briefs: {}, running: {} };
 
 // ---------- tiny DOM helper: all text goes in as textContent (scraped content is untrusted)
 function el(tag, attrs = {}, ...kids) {
@@ -547,7 +562,7 @@ async function startRun() {
   showError(""); btn.disabled = true;
   try {
     const run = await api("/api/runs", {method: "POST", body: JSON.stringify({domains: document.getElementById("domains").value})});
-    state = { runId: run.run_id, domains: run.domains, artifacts: Object.fromEntries(run.domains.map(d => [d, {}])), running: {} };
+    state = { runId: run.run_id, domains: run.domains, artifacts: Object.fromEntries(run.domains.map(d => [d, {}])), briefs: {}, running: {} };
     render();
     document.getElementById("results").scrollIntoView({behavior: "smooth", block: "start"});
     for (const d of run.domains) await runDomain(d);
@@ -563,6 +578,7 @@ async function runDomain(domain) {
     try { out = await api(`/api/runs/${state.runId}/step`, {method: "POST", body: JSON.stringify({domain, step})}); }
     catch (e) { out = {status: "error", message: e.message, artifact: {status: "error", reasoning: e.message}}; }
     if (out.artifact) state.artifacts[domain][FILES[step]] = out.artifact;
+    if (out.brief) state.briefs[domain] = out.brief;
     delete state.running[domain]; renderCard(domain); renderSummary();
     if (out.status !== "done") break;
   }
@@ -573,6 +589,7 @@ async function sendEmail(domain, btn) {
   try {
     const out = await api(`/api/runs/${state.runId}/send`, {method: "POST", body: JSON.stringify({domain})});
     if (out.artifact) state.artifacts[domain]["07_send"] = out.artifact;
+    if (out.brief) state.briefs[domain] = out.brief;
   } catch (e) { state.artifacts[domain]["07_send"] = {status: "error", reasoning: e.message, output: {status: "error", subject: e.message}}; }
   renderCard(domain); renderSummary();
 }
@@ -581,9 +598,45 @@ async function openRun(runId) {
   if (!runId) return;
   showError("");
   const run = await api(`/api/runs/${runId}`);
-  state = { runId, domains: run.domains, artifacts: run.artifacts, running: {} };
+  state = { runId, domains: run.domains, artifacts: run.artifacts, briefs: run.briefs || {}, running: {} };
   render();
   document.getElementById("results").scrollIntoView({behavior: "smooth", block: "start"});
+}
+
+
+// ---------- contact names stay hidden until the eye is clicked (like a password field)
+function svgIcon(name) {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "icon");
+  const u = document.createElementNS("http://www.w3.org/2000/svg", "use"); u.setAttribute("href", name); s.append(u); return s;
+}
+function secret(text) {
+  const value = el("span", {class: "secret-value"}, "•••••••••");
+  const btn = el("button", {class: "eye", type: "button", "aria-label": "Show contact", title: "Show contact"});
+  let shown = false;
+  btn.append(svgIcon("#i-eye"));
+  btn.onclick = () => {
+    shown = !shown;
+    value.textContent = shown ? text : "•••••••••";
+    btn.replaceChildren(svgIcon(shown ? "#i-eye-off" : "#i-eye"));
+    btn.setAttribute("aria-label", shown ? "Hide contact" : "Show contact");
+    btn.setAttribute("title", shown ? "Hide contact" : "Show contact");
+  };
+  return el("span", {class: "secret"}, value, btn);
+}
+
+// ---------- decision brief: who / why now / evidence / what to say / still uncertain
+function briefBlock(b) {
+  if (!b || !b.verdict) return null;
+  const row = (k, v) => v ? el("div", {class: "brief-row"}, el("dt", {}, k), el("dd", {}, v)) : null;
+  const isPerson = b.who && !/^(No contact|Not looked|Nobody)/.test(b.who);
+  return el("div", {class: "brief"},
+    el("p", {class: "brief-title"}, "Decision brief"),
+    el("dl", {},
+      row("Who to contact", isPerson ? secret(b.who) : b.who),
+      row("Why now", (b.why_now || []).join(" · ") || "-"),
+      row("Evidence", (b.evidence || []).length ? el("span", {}, ...b.evidence.flatMap((e, i) => [i ? " · " : "", e.claim + " ", link(e.source_url, "source")])) : null),
+      row("What to say", b.what_to_say ? `Subject: ${b.what_to_say}` : null),
+      row("Still uncertain", (b.uncertain || []).length ? el("ul", {class: "ev"}, ...b.uncertain.map(u => el("li", {}, u))) : "nothing flagged")));
 }
 
 // ---------- rendering
@@ -614,7 +667,7 @@ function renderSummary() {
       el("td", {style: "font-weight:900;color:var(--ink-900)"}, d), el("td", {}, el("span", {class: "badge " + cls}, label(verdict))),
       el("td", {class: "num"}, q ? String(q.score) : ""),
       el("td", {class: "small"}, q ? (q.top_reasons || []).join(" · ") : ""),
-      el("td", {}, poc && poc.chosen ? `${poc.chosen.first_name || ""} ${poc.chosen.last_name || ""} (${poc.chosen.position || ""})` : ""),
+      el("td", {}, poc && poc.chosen ? secret(`${poc.chosen.first_name || ""} ${poc.chosen.last_name || ""} (${poc.chosen.position || ""})`) : ""),
       el("td", {}, mail ? mail.draft.subject + (mail.flagged ? " (flagged)" : "") : ""));
   });
   document.getElementById("summary").replaceChildren(el("thead", {}, head), el("tbody", {}, ...rows));
@@ -667,11 +720,11 @@ function renderCard(d) {
       return [table, evidenceList(o.evidence, 12), its];
     }, true),
     section("Point of contact", a["04_poc"], o => o.chosen ? el("dl", {class: "kv"},
-      el("dt", {}, "Chosen"), el("dd", {}, `${o.chosen.first_name} ${o.chosen.last_name || ""}, ${o.chosen.position || ""} (${o.chosen.email}, confidence ${o.chosen.confidence ?? "?"})`),
-      el("dt", {}, "Alternatives"), el("dd", {}, (o.alternatives || []).map(c => `${c.first_name || "?"} (${c.position || "?"})`).join(" · ") || "none"),
+      el("dt", {}, "Chosen"), el("dd", {}, secret(`${o.chosen.first_name} ${o.chosen.last_name || ""}, ${o.chosen.position || ""} (${o.chosen.email})`), ` · confidence ${o.chosen.confidence ?? "?"}`),
+      el("dt", {}, "Alternatives"), el("dd", {}, (o.alternatives || []).length ? secret((o.alternatives || []).map(c => `${c.first_name || "?"} (${c.position || "?"})`).join(" · ")) : "none"),
       el("dt", {}, "Hunter credits"), el("dd", {}, String(o.hunter_credits_used))) : null),
     section("Pain points", a["05_pain"], o => el("div", {}, ...(o || []).map(p => el("div", {},
-      el("p", {class: "reason"}, el("strong", {}, p.title), " · " + p.why_this_person), evidenceList(p.evidence, 2))))),
+      el("p", {class: "reason"}, el("strong", {}, p.title), " ", el("span", {class: "badge " + (p.kind === "observed" ? "done" : "dry_run")}, p.kind || "inferred"), " · " + p.why_this_person), evidenceList(p.evidence, 2))))),
     section("Email draft", a["06_email"], o => {
       const out = [el("p", {class: "small muted"}, "Subject: ", el("strong", {style: "color:var(--ink-900)"}, o.draft.subject)), el("pre", {class: "email"}, o.full_body)];
       if (o.flagged) out.push(el("p", {class: "error"}, "Flagged, so it will not be sent: " + o.problems.join("; ")));
@@ -683,7 +736,7 @@ function renderCard(d) {
     }, true),
     section("Send", a["07_send"], o => el("p", {class: "small"}, el("span", {class: "badge " + o.status}, label(o.status)), " " + (o.subject || ""))),
   ];
-  holder.replaceChildren(el("div", {class: "dcard"}, head, steps, ...parts.filter(Boolean)));
+  holder.replaceChildren(el("div", {class: "dcard"}, head, steps, briefBlock(state.briefs[d]), ...parts.filter(Boolean)));
 }
 
 // ---------- boot

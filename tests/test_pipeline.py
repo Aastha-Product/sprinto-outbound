@@ -105,6 +105,19 @@ def test_full_pipeline_dry_run(setup):
     assert summary_rows(store.load_run("r1"))[0]["verdict"] == "qualified"
 
 
+def test_decision_brief_answers_the_five_questions(setup):
+    from outbound.report import decision_brief
+
+    store, settings, _ = setup
+    run_domain("rb", "acme.io", parse_steps("1-6"), settings, store, RunOptions())
+    b = decision_brief(store.load_run("rb")["acme.io"])
+    assert b["verdict"] == "qualified" and b["who"].startswith("Alex Kim")
+    assert b["why_now"] and b["evidence"] and b["what_to_say"] == "ISO 27001 next to SOC 2"
+    assert any("inferred" in u for u in b["uncertain"])  # the fake pain points default to "inferred"
+    _csv, md = write_reports("rb", store)
+    assert "**Decision brief**" in md
+
+
 def test_send_step_reaches_only_owner(setup):
     store, settings, sent = setup
     run_domain("r2", "acme.io", parse_steps("1-6"), settings, store, RunOptions())

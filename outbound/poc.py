@@ -105,8 +105,13 @@ def match_tier(contact: Contact, tiers: list[PocTier]) -> PocTier | None:
     for tier in tiers:
         for kw in tier.keywords:
             if kw.startswith("seniority:"):
-                if (contact.seniority or "").lower() == kw.split(":", 1)[1].strip():
-                    return tier
+                # "seniority:executive in executive it management" -> seniority must match AND department must be listed
+                rule, _, depts = kw.split(":", 1)[1].partition(" in ")
+                if (contact.seniority or "").lower() != rule.strip():
+                    continue
+                if depts.strip() and (contact.department or "").lower() not in depts.split():
+                    continue
+                return tier
             elif normalise_title(kw) in title:
                 return tier
     return None

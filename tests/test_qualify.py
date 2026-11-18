@@ -63,7 +63,7 @@ def test_search_citations_become_citable_sources():
 
 # ---------------------------------------------------------------- scoring
 def test_same_signals_always_give_same_score():
-    signals = [yes("ENT_PLAN"), yes("ENT_DEMO"), yes("STAGE_FUNDING"), yes("GEO_US")]
+    signals = [yes("ENT_PLAN"), yes("ENT_DEMO"), yes("STAGE_SERIES"), yes("GEO_US")]
     assert q.score_signals(signals, ICP) == q.score_signals(list(reversed(signals)), ICP)
     assert q.score_signals(signals, ICP)[0] == 8 + 4 + 10 + 5
 
@@ -162,7 +162,7 @@ def install_fake_llm(monkeypatch, signal_batches, actions=(), search=("", [])):
 
 def strong_signals():
     ids = ["ENT_PLAN", "ENT_DEMO", "ENT_LOGOS", "ENT_SSO", "DATA_INTEGRATIONS", "DATA_SENSITIVE", "GAP_IN_PROGRESS", "STAGE_SIZE", "GEO_US"]
-    return ([yes(i) for i in ids] + [yes("STAGE_FUNDING", "We raised our Series B in March 2026")]
+    return ([yes(i) for i in ids] + [yes("STAGE_SERIES", "We raised our Series B in March 2026")]
             + [Signal(rule_id="DQ_SPRINTO_CUSTOMER", value="no")])
 
 
@@ -224,12 +224,12 @@ def test_search_quota_error_turns_search_off_for_the_run(monkeypatch, ctx):
 def test_funding_window_is_checked_in_python(quote, value):
     from datetime import date
 
-    sig = Signal(rule_id="STAGE_FUNDING", value="yes", detail="", evidence=[ev(quote)])
+    sig = Signal(rule_id="STAGE_RECENT_FUNDING", value="yes", detail="", evidence=[ev(quote)])
     assert q.apply_funding_window(sig, 24, today=date(2026, 11, 19)).value == value
 
 
 def test_funding_window_leaves_no_and_unknown_alone():
-    sig = Signal(rule_id="STAGE_FUNDING", value="no", evidence=[ev("Series A in 2025")])
+    sig = Signal(rule_id="STAGE_RECENT_FUNDING", value="no", evidence=[ev("Series A in 2025")])
     assert q.apply_funding_window(sig, 24).value == "no"
 
 
@@ -265,7 +265,7 @@ def test_scraped_competitor_link_forces_penalty(ctx):
 
 
 def test_hallucinated_evidence_is_dropped(ctx):
-    fake = Signal(rule_id="STAGE_FUNDING", value="yes", evidence=[ev(quote="raised $40M Series B from Accel")])
+    fake = Signal(rule_id="STAGE_SERIES", value="yes", evidence=[ev(quote="raised $40M Series B from Accel")])
     cleaned = {s.rule_id: s for s in q.clean_signals([fake], ctx)}
-    assert cleaned["STAGE_FUNDING"].evidence == []
+    assert cleaned["STAGE_SERIES"].evidence == []
     assert q.score_signals(list(cleaned.values()), ICP)[0] == 0
