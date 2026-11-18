@@ -47,6 +47,30 @@ class LLMBudgetExceeded(RuntimeError):
     """Too many LLM calls for one domain (guardrail: MAX_LLM_CALLS_PER_DOMAIN)."""
 
 
+class LLMFatalError(RuntimeError):
+    """Gemini refuses every call (no credits, bad key, no access). The whole run should stop."""
+
+
+FATAL_HINTS = {
+    400: "Gemini rejected the request. If it mentions the API key, check GEMINI_API_KEY in .env.",
+    401: "Gemini says the API key is not valid. Check GEMINI_API_KEY in .env.",
+    402: "Your Gemini credits are used up. Add credit or switch the project to the free tier at https://aistudio.google.com (Billing).",
+    403: "This Gemini API key has no access to the model. Check GEMINI_API_KEY / GEMINI_MODEL in .env.",
+    404: "GEMINI_MODEL was not found. Run: python scripts\\list_models.py and pick a listed name.",
+}
+
+
+def _fatal(exc: errors.APIError) -> LLMFatalError | None:
+    """Turn account-level errors into one clear message; other errors stay per-domain."""
+    code = getattr(exc, "code", None)
+    text = str(exc).lower()
+    if code == 400 and "api key" not in text and "api_key" not in text:
+        return None  # a bad prompt/schema: only this call failed
+    if code in FATAL_HINTS:
+        return LLMFatalError(f"Gemini error {code}: {FATAL_HINTS[code]}")
+    return None
+
+
 # ---------------------------------------------------------------- call budget
 class _Budget:
     """Counts LLM calls for the current domain."""
@@ -137,10 +161,21 @@ _retry = retry(
 
 
 @_retry
-def _generate(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
+def _generate_raw(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
     settings = get_settings()
     settings.require("gemini")
     return get_client().models.generate_content(model=settings.gemini_model, contents=contents, config=config)
+
+
+def _generate(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
+    """One Gemini call with retries; account-level failures become `LLMFatalError`."""
+    try:
+        return _generate_raw(contents, config)
+    except errors.ClientError as exc:
+        fatal = _fatal(exc)
+        if fatal:
+            raise fatal from None
+        raise
 
 
 def model_name() -> str:
@@ -207,6 +242,8 @@ def research_with_search(question: str) -> tuple[str, list[Citation]]:
     )
     try:
         response = _generate(prompt, config)
+    except LLMFatalError:
+        raise
     except errors.APIError as exc:
         log.warning("Web search (grounding) failed: %s. Continuing with website data only.", exc)
         return "", []

@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from outbound import PROJECT_ROOT
 from outbound.config import get_settings
 from outbound.domains import parse_domains
+from outbound.llm import LLMFatalError
 from outbound.pipeline import STEP_TITLES, DomainRunner, RunOptions, new_run_id
 from outbound.report import summary_rows, write_reports
 from outbound.storage import get_store, ping_database
@@ -151,7 +152,10 @@ def run_step(run_id: str, body: StepRequest, request: Request) -> dict:
         raise HTTPException(400, "Steps 1-6 only. Sending has its own button.")
     if body.domain not in run_domains(run_id):
         raise HTTPException(400, "That domain is not part of this run.")
-    outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions()).run_step(body.step)
+    try:
+        outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions()).run_step(body.step)
+    except LLMFatalError as exc:
+        raise HTTPException(503, f"The AI service is unavailable for this site right now ({exc}).") from None
     return {"step": outcome.step, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact)}
 
 

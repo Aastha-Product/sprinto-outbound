@@ -209,8 +209,14 @@ class Fetcher:
         self._last_request = time.monotonic()
 
     def _raw_get(self, url: str) -> httpx.Response:
+        """GET with one retry on a network hiccup (connection reset, timeout)."""
         self._wait()
-        return self.client.get(url)
+        try:
+            return self.client.get(url)
+        except httpx.TransportError:
+            self.sleep(2.0)
+            self._last_request = time.monotonic()
+            return self.client.get(url)
 
     def allowed(self, url: str) -> bool:
         """Check robots.txt for this URL's host (fetched once per host)."""

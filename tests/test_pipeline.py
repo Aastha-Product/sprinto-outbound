@@ -129,6 +129,35 @@ def test_errors_are_saved_not_raised(setup, monkeypatch):
     assert store.load_artifact("r3", "acme.io", "02_extract")["status"] == "error"
 
 
+def test_out_of_credits_stops_the_whole_run(setup, monkeypatch):
+    store, settings, _ = setup
+
+    def broke(*a, **k):
+        raise llm.LLMFatalError("Gemini error 402: credits used up")
+
+    monkeypatch.setattr(llm, "generate_json", broke)
+    with pytest.raises(llm.LLMFatalError):
+        run_domain("r4", "acme.io", parse_steps("1-3"), settings, store, RunOptions())
+    assert store.load_artifact("r4", "acme.io", "02_extract")["status"] == "error"
+
+
+def test_continuing_a_run_reuses_finished_steps(setup, monkeypatch):
+    store, settings, _ = setup
+    run_domain("r5", "acme.io", parse_steps("1-2"), settings, store, RunOptions())
+    monkeypatch.setattr(llm, "generate_json", lambda *a, **k: pytest.fail("step 2 should have been reused"))
+    outcomes = run_domain("r5", "acme.io", parse_steps("1-2"), settings, store, RunOptions(skip_done=True))
+    assert all("reused" in o.message for o in outcomes)
+
+
+def test_fatal_error_classification():
+    from google.genai import errors
+
+    assert llm._fatal(errors.ClientError(402, {"error": {"message": "credits depleted"}})) is not None
+    assert llm._fatal(errors.ClientError(400, {"error": {"message": "API key not valid"}})) is not None
+    assert llm._fatal(errors.ClientError(400, {"error": {"message": "bad schema"}})) is None
+    assert llm._fatal(errors.ClientError(429, {"error": {"message": "slow down"}})) is None
+
+
 def test_file_store_round_trip(tmp_path):
     fs = FileStore(tmp_path / "runs", tmp_path / "cache")
     fs.save_artifact("run1", "acme.io", "01_scrape", {"status": "done", "x": 1})

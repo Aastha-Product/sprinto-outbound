@@ -21,6 +21,7 @@ from rich.table import Table
 from outbound import PROJECT_ROOT
 from outbound.config import ConfigError, get_settings
 from outbound.domains import parse_domains, read_domains
+from outbound.llm import LLMFatalError
 from outbound.logging_setup import setup_logging
 from outbound.pipeline import STEP_TITLES, RunOptions, StepOutcome, find_latest_run, new_run_id, parse_steps, run_domain
 from outbound.report import summary_rows, write_reports
@@ -62,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     store = FileStore() if args.local else get_store(settings)
-    options = RunOptions(send=args.send, no_hunter=args.no_hunter, use_cache=not args.fresh)
+    options = RunOptions(send=args.send, no_hunter=args.no_hunter, use_cache=not args.fresh, skip_done=bool(args.run))
     if args.send and not settings.send_enabled:
         console.print("[yellow]--send was given but SEND_ENABLED is not true in .env, so this stays a dry run.[/yellow]")
 
@@ -85,13 +86,19 @@ def main(argv: list[str] | None = None) -> int:
         console.print(f"  [{colour}]{domain} · {outcome.step} {STEP_TITLES[outcome.step]} · {outcome.status}[/{colour}] {outcome.message[:160]}")
 
     used_runs = set()
+    fatal: str | None = None
     for d in domains:
         if steps[0] > 1 and d not in run_ids:
             continue
         run_id = run_ids.get(d, default_run)
         used_runs.add(run_id)
         console.rule(d)
-        run_domain(run_id, d, steps, settings, store, options, on_step)
+        try:
+            run_domain(run_id, d, steps, settings, store, options, on_step)
+        except LLMFatalError as exc:
+            fatal = str(exc)
+            console.print(f"\n[bold red]Stopping the run: {exc}[/bold red]")
+            break
 
     for run_id in sorted(used_runs):
         write_reports(run_id, store)
@@ -100,6 +107,10 @@ def main(argv: list[str] | None = None) -> int:
             console.print(f"Artifacts: {store.runs_dir / run_id}")
         else:
             console.print(f"Artifacts saved in Neon under run id {run_id}")
+    if fatal:
+        console.print(f"[bold red]Not finished: {fatal}[/bold red]\nAfter fixing it, re-run the same command and add "
+                      f"--run {sorted(used_runs)[-1]} to fill in the same run (scraped pages are cached).")
+        return 2
     return 0
 
 

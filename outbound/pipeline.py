@@ -51,6 +51,7 @@ class RunOptions:
     send: bool = False  # Step 7 actually sends only with this AND SEND_ENABLED=true
     no_hunter: bool = False  # never spend a Hunter credit (cache only)
     use_cache: bool = True  # reuse cached scrapes
+    skip_done: bool = False  # when continuing a run: reuse steps that already finished ('done')
 
 
 @dataclass
@@ -115,8 +116,14 @@ class DomainRunner:
             return handler()
         except StepStop as stop:
             return StepOutcome(n, "stopped", str(stop))
+        except llm.LLMFatalError as exc:  # no point trying other domains: save, then stop the whole run
+            self._save(n, "error", f"step {n} for {self.domain}", None, f"Step failed: {exc}")
+            raise
         except Exception as exc:  # keep going with other domains; record what happened
-            log.exception("[%s] step %d failed", self.domain, n)
+            if log.isEnabledFor(logging.DEBUG):
+                log.exception("[%s] step %d failed", self.domain, n)
+            else:
+                log.error("[%s] step %d failed: %s: %s (run with -v for details)", self.domain, n, type(exc).__name__, str(exc)[:200])
             message = f"{type(exc).__name__}: {str(exc)[:300]}"
             art = self._save(n, "error", f"step {n} for {self.domain}", None, f"Step failed: {message}")
             return StepOutcome(n, "error", message, art)
@@ -233,7 +240,11 @@ def run_domain(run_id: str, domain: str, steps: list[int], settings: Settings, s
     runner = DomainRunner(run_id, domain, settings, store, options)
     outcomes = []
     for n in steps:
-        outcome = runner.run_step(n)
+        existing = runner.artifact(n) if options.skip_done else None
+        if existing and existing.get("status") == "done":
+            outcome = StepOutcome(n, "done", "already done in this run (reused, no new API calls)", existing)
+        else:
+            outcome = runner.run_step(n)
         outcomes.append(outcome)
         if on_step:
             on_step(domain, outcome)
