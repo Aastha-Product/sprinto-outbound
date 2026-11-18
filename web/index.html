@@ -3,212 +3,293 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Outbound Intelligence</title>
-<meta name="description" content="Sprinto outbound intelligence workspace: qualify prospects with evidence, find the right decision-maker, prepare outreach.">
+<title>Sprinto Outbound</title>
+<meta name="description" content="Turn a list of company domains into evidence-backed prospect intelligence and personalised outreach.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
 <style>
-  /* Layout: fixed evergreen sidebar (top bar on phones) + one workspace view at a time (hash routes).
-     Light-first enterprise theme; status colours are semantic and always paired with a text label + icon. */
+  /* Editorial Intelligence. Three experiences on one page: public homepage (#/), workspace (#app),
+     decision report (#app/report/...). Ink + ivory, one restrained signal-lime accent, big Manrope headlines. */
   :root {
-    --nav: #142D35; --nav-ink: #DCE8E3; --nav-muted: #8FA9A1; --nav-active: #1E4048;
-    --bg: #F4F7F5; --surface: #FFFFFF; --line: #DFE7E3; --line-strong: #C9D6D0;
-    --ink: #13252B; --ink-2: #3D5158; --muted: #6A7C80;
-    --primary: #16866B; --primary-ink: #FFFFFF; --primary-hover: #12705A; --mint: #E9F2EE;
-    --amber-bg: #F2E6CF; --amber: #8A5A12;
-    --green-bg: #DDF0E7; --green: #13714F;
-    --red-bg: #F8E1DE; --red: #A8352A;
-    --grey-bg: #ECEFEE; --grey: #5D6B6E;
-    --blue-bg: #E1ECF7; --blue: #275D93;
-    --r: 10px; --r-sm: 8px;
-    --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ink: #151C29; --ink-2: #2B3445; --ivory: #F8F8F4; --paper: #FFFFFF; --lime: #C8F36B; --lime-deep: #A9D94A;
+    --slate: #596B84; --stone: #E7E9E3; --stone-2: #D7DAD2;
+    --amber-bg: #F6E7BF; --amber: #6B4E0A; --red-bg: #F6D5CF; --red: #8A2A1E;
+    --display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
     --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --r: 14px; --r-sm: 10px;
     color-scheme: light;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
-  a { color: var(--primary); text-decoration: none; overflow-wrap: anywhere; }
-  a:hover { text-decoration: underline; }
-  h1, h2, h3 { margin: 0; font-weight: 600; color: var(--ink); text-wrap: balance; }
-  h1 { font-size: 22px; letter-spacing: -0.01em; } h2 { font-size: 16px; } h3 { font-size: 14px; }
-  :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
-  .num, td.num { font-variant-numeric: tabular-nums; }
-  .muted { color: var(--muted); } .small { font-size: 12.5px; }
-  .icon { width: 16px; height: 16px; flex: none; vertical-align: -3px; }
-
-  /* shell */
-  .shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100%; }
-  .side { background: var(--nav); color: var(--nav-ink); padding: 20px 14px; display: flex; flex-direction: column; gap: 22px;
-          position: sticky; top: 0; height: 100vh; }
-  .brand { display: flex; gap: 10px; align-items: center; padding: 0 6px; }
-  .brand-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--primary); display: grid; place-items: center; color: #fff; }
-  .brand strong { display: block; font-size: 14px; font-weight: 600; color: #fff; }
-  .brand span { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--nav-muted); }
-  .nav { display: grid; gap: 2px; }
-  .nav a { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: var(--r-sm); color: var(--nav-ink); font-weight: 500; }
-  .nav a:hover { background: var(--nav-active); text-decoration: none; }
-  .nav a[aria-current="page"] { background: var(--nav-active); color: #fff; box-shadow: inset 3px 0 0 var(--primary); }
-  .nav .sep { height: 1px; background: rgba(255,255,255,.08); margin: 8px 4px; }
-  .side-foot { margin-top: auto; display: grid; gap: 8px; padding: 0 6px; font-size: 12px; color: var(--nav-muted); }
-  .side-foot .pill { display: inline-flex; gap: 6px; align-items: center; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--nav-muted); display: inline-block; flex: none; }
-  .dot.ok { background: #3FBF8F; } .dot.warn { background: #E1B04A; } .dot.bad { background: #E26B5E; }
-  main { min-width: 0; padding: 28px 32px 64px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
-  .page { max-width: 1180px; margin: 0 auto; display: grid; gap: 20px; }
-  .page-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; justify-content: space-between; }
-  .page-head p { margin: 4px 0 0; color: var(--muted); }
-  @media (max-width: 900px) {
-    .shell { grid-template-columns: 1fr; }
-    .side { position: sticky; top: env(safe-area-inset-top, 0px); height: auto; z-index: 20; flex-direction: row; align-items: center; gap: 12px;
-            padding: 10px max(16px, env(safe-area-inset-left, 0px)); overflow-x: auto; }
-    .brand span, .side-foot { display: none; }
-    .nav { display: flex; gap: 2px; }
-    .nav a { white-space: nowrap; padding: 6px 10px; } .nav .sep { display: none; }
-    main { padding: 20px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
-  }
-
-  /* surfaces */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; min-width: 0; }
-  .card-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
-  .grid-2 { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
-  @media (max-width: 1000px) { .grid-2 { grid-template-columns: 1fr; } }
-  .kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
-  .kpi b { display: block; font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .kpi span { color: var(--muted); font-size: 12.5px; }
-  .banner { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--r); border: 1px solid; }
-  .banner.info { background: var(--mint); border-color: #CFE3DA; color: var(--ink-2); }
-  .banner.warn { background: var(--amber-bg); border-color: #E6D2AC; color: #5E3F0E; }
-  .banner.err { background: var(--red-bg); border-color: #EFC5BF; color: #7B241B; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body { margin: 0; background: var(--ivory); color: var(--ink); font: 400 16px/1.6 var(--body); -webkit-font-smoothing: antialiased; }
+  a { color: inherit; } a:hover { color: var(--slate); }
+  h1, h2, h3, .display { font-family: var(--display); color: var(--ink); margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+  p { margin: 0; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+  .muted { color: var(--slate); } .small { font-size: 13.5px; } .num { font-variant-numeric: tabular-nums; }
+  .eyebrow { font: 600 12px var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--slate); }
+  .icon { width: 18px; height: 18px; flex: none; vertical-align: -3px; }
+  .hl { background: linear-gradient(transparent 58%, var(--lime) 58%, var(--lime) 92%, transparent 92%); padding: 0 .06em; }
 
   /* buttons */
-  .btn { display: inline-flex; gap: 8px; align-items: center; justify-content: center; font: 500 14px/1 var(--font); padding: 10px 16px;
-         border-radius: var(--r-sm); border: 1px solid transparent; cursor: pointer; background: var(--primary); color: var(--primary-ink); }
-  .btn:hover { background: var(--primary-hover); text-decoration: none; }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
-  .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
-  .btn.ghost:hover { background: var(--mint); }
-  .btn.sm { padding: 6px 10px; font-size: 13px; }
+  .btn { display: inline-flex; gap: 10px; align-items: center; justify-content: center; font: 600 15px/1 var(--body); padding: 14px 20px;
+         border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--ivory); cursor: pointer; text-decoration: none;
+         transition: transform .15s ease, background .15s ease; }
+  .btn:hover { color: var(--ivory); transform: translateY(-1px); }
+  .btn.lime { background: var(--lime); color: var(--ink); border-color: var(--lime); }
+  .btn.lime:hover { background: var(--lime-deep); color: var(--ink); }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--stone-2); }
+  .btn.ghost:hover { background: var(--paper); color: var(--ink); }
+  .btn.sm { padding: 9px 14px; font-size: 14px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .textlink { font-weight: 600; text-decoration: underline; text-decoration-color: var(--lime-deep); text-underline-offset: 4px; text-decoration-thickness: 2px; }
 
-  /* status */
-  .status { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
-  .status .icon { width: 13px; height: 13px; }
-  .s-qualified, .s-done, .s-sent, .s-observed { background: var(--green-bg); color: var(--green); }
-  .s-review, .s-insufficient_data, .s-stopped, .s-dry_run, .s-skipped, .s-inferred { background: var(--amber-bg); color: var(--amber); }
-  .s-failed, .s-error, .s-blocked { background: var(--red-bg); color: var(--red); }
-  .s-rejected, .s-pending, .s-none { background: var(--grey-bg); color: var(--grey); }
-  .s-running { background: var(--blue-bg); color: var(--blue); }
+  /* top bars */
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: rgba(248,248,244,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid transparent; }
+  .topbar.scrolled, .topbar.app { border-bottom-color: var(--stone); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: var(--ivory); z-index: 40; }
+  .topbar .wrap { display: flex; align-items: center; gap: 24px; height: 68px; }
+  .wordmark { display: inline-flex; align-items: center; gap: 10px; font: 800 15px var(--display); letter-spacing: .08em; text-decoration: none; color: var(--ink); }
+  .wordmark i { width: 24px; height: 24px; border-radius: 7px; background: var(--ink); position: relative; display: inline-block; }
+  .wordmark i::after { content: ""; position: absolute; inset: 7px 5px 7px 7px; background: var(--lime); border-radius: 2px; }
+  .topnav { display: flex; gap: 22px; margin-left: 12px; }
+  .topnav a { text-decoration: none; font-weight: 500; color: var(--ink-2); font-size: 15px; padding: 6px 0; border-bottom: 2px solid transparent; }
+  .topnav a[aria-current="page"] { border-bottom-color: var(--ink); color: var(--ink); }
+  .topbar .right { margin-left: auto; display: flex; gap: 12px; align-items: center; }
+  .mode { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--slate); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stone-2); display: inline-block; }
+  .dot.on { background: var(--lime-deep); box-shadow: 0 0 0 3px rgba(200,243,107,.35); }
+  @media (max-width: 760px) { .topnav.home { display: none; } .mode { display: none; } .topnav.appnav { gap: 14px; margin-left: 0; overflow-x: auto; } .topbar .wrap { gap: 14px; } }
 
-  /* tables */
-  .tablewrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 12px; font-weight: 600; color: var(--muted); background: #FAFCFB; }
-  tbody tr:hover { background: #FAFCFB; }
-  td.num { text-align: right; }
-  .co b { display: block; font-weight: 600; } .co span { color: var(--muted); font-size: 12.5px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); font: 500 12.5px var(--font); padding: 5px 10px; border-radius: 999px; cursor: pointer; }
-  .chip[aria-pressed="true"] { background: var(--nav); color: #fff; border-color: var(--nav); }
-  input[type=search], textarea, select { font: 400 14px/1.5 var(--font); color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong);
-         border-radius: var(--r-sm); padding: 8px 10px; width: 100%; }
-  textarea { font-family: var(--mono); font-size: 13px; min-height: 180px; resize: vertical; }
-  input:focus, textarea:focus, select:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  /* ============================== homepage */
+  .hero { position: relative; overflow: hidden; }
+  .gridbg { position: absolute; inset: 0; pointer-events: none;
+    background-image: linear-gradient(var(--stone) 1px, transparent 1px), linear-gradient(90deg, var(--stone) 1px, transparent 1px);
+    background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse at 30% 30%, #000 0%, transparent 70%); mask-image: radial-gradient(ellipse at 30% 30%, #000 0%, transparent 70%); opacity: .7; }
+  .hero-grid { position: relative; display: grid; gap: 56px; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; padding-block: 72px 88px; }
+  @media (max-width: 960px) { .hero-grid { grid-template-columns: 1fr; padding-block: 48px 64px; } }
+  .hero h1 { font-size: clamp(40px, 5.4vw, 60px); line-height: 1.04; font-weight: 800; margin: 18px 0 22px; }
+  .hero .lede { font-size: 19px; color: var(--ink-2); max-width: 34em; }
+  .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
+  .demo { background: var(--paper); border-radius: 22px; padding: 28px; box-shadow: 0 30px 80px -40px rgba(21,28,41,.35), 0 0 0 1px var(--stone); position: relative; }
+  .demo .tag { position: absolute; top: -12px; left: 24px; background: var(--ink); color: var(--ivory); font: 600 11px var(--body); letter-spacing: .12em; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; }
+  .demo-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+  .demo h3 { font-size: 30px; font-weight: 800; }
+  .ring { --p: 0; width: 104px; height: 104px; border-radius: 50%; flex: none; display: grid; place-items: center;
+          background: conic-gradient(var(--lime-deep) calc(var(--p) * 1%), var(--stone) 0); }
+  .ring > div { width: 82px; height: 82px; border-radius: 50%; background: var(--paper); display: grid; place-items: center; text-align: center; }
+  .ring b { font: 800 28px/1 var(--display); font-variant-numeric: tabular-nums; } .ring span { display: block; font-size: 11px; color: var(--slate); }
+  .ring.big { width: 148px; height: 148px; } .ring.big > div { width: 118px; height: 118px; } .ring.big b { font-size: 42px; }
+  .checks { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 0; }
+  .checks li { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 13px 0; border-top: 1px solid var(--stone); align-items: center; }
+  .checks .k { font: 600 11.5px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--slate); }
+  .checks .v { font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
+  .band { padding-block: 88px; }
+  .band.dark { background: var(--ink); color: var(--ivory); }
+  .band.dark h2, .band.dark h3 { color: var(--ivory); } .band.dark .muted { color: #A9B4C6; }
+  .section-head { max-width: 760px; margin-bottom: 48px; }
+  .section-head h2 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.1; font-weight: 800; margin-top: 12px; }
+  .section-head p { margin-top: 16px; font-size: 18px; color: var(--ink-2); }
+  .band.dark .section-head p { color: #C9D1DE; }
+  .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-top: 1px solid rgba(255,255,255,.15); }
+  .compare > div { padding: 32px 32px 8px 0; }
+  .compare > div + div { padding-left: 32px; border-left: 1px solid rgba(255,255,255,.15); }
+  .compare b { display: block; font: 800 clamp(44px, 6vw, 72px)/1 var(--display); font-variant-numeric: tabular-nums; }
+  .compare .after b { color: var(--lime); }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } .compare > div + div { padding-left: 0; border-left: 0; border-top: 1px solid rgba(255,255,255,.15); } }
+  .steps3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+  .steps3 .n { font: 800 64px/1 var(--display); color: var(--stone-2); }
+  .steps3 h3 { font-size: 26px; font-weight: 800; margin: 14px 0 10px; }
+  .steps3 p { color: var(--ink-2); }
+  .steps3 .sub { margin-top: 14px; font-size: 13.5px; color: var(--slate); border-top: 1px solid var(--stone); padding-top: 12px; }
+  @media (max-width: 860px) { .steps3 { grid-template-columns: 1fr; gap: 32px; } }
+  .trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+  .trust article { background: var(--paper); border-radius: var(--r); padding: 28px; box-shadow: 0 0 0 1px var(--stone); }
+  .trust h3 { font-size: 21px; font-weight: 800; margin-bottom: 10px; } .trust p { color: var(--ink-2); font-size: 15.5px; }
+  .mock { margin-top: 20px; font-size: 13px; background: var(--ivory); border-radius: var(--r-sm); padding: 14px; display: grid; gap: 8px; }
+  .mock .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  @media (max-width: 960px) { .trust { grid-template-columns: 1fr; } }
+  .results { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
+  @media (max-width: 900px) { .results { grid-template-columns: 1fr; gap: 32px; } }
+  .bars { display: grid; gap: 14px; }
+  .barrow { display: grid; grid-template-columns: 150px 1fr 36px; gap: 14px; align-items: center; font-size: 15px; }
+  .barrow .track { height: 12px; background: var(--stone); border-radius: 999px; overflow: hidden; }
+  .barrow .track i { display: block; height: 100%; background: var(--ink); border-radius: 999px; width: 0; transition: width .9s cubic-bezier(.2,.7,.2,1); }
+  .barrow.q .track i { background: var(--lime-deep); }
+  .bigstat { font: 800 clamp(64px, 9vw, 112px)/.9 var(--display); font-variant-numeric: tabular-nums; }
+  .cta-band { text-align: center; } .cta-band h2 { font-size: clamp(32px, 4.4vw, 52px); font-weight: 800; line-height: 1.08; max-width: 18ch; margin: 0 auto 28px; }
+  footer.site { padding-block: 40px; border-top: 1px solid var(--stone); font-size: 14px; color: var(--slate); }
+  footer.site .wrap { display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-between; }
+  footer.site a { color: var(--ink-2); }
 
-  /* new run */
-  .stepnum { font: 600 12px var(--font); color: var(--primary); letter-spacing: .06em; }
-  .cfg-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: center; }
-  .cfg-row:last-child { border-bottom: 0; }
-  .cfg-row b { display: block; font-weight: 500; } .cfg-row span { color: var(--muted); font-size: 12.5px; }
-  .validation { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
-  .validation .bad { color: var(--red); } .validation .good { color: var(--green); }
+  /* ============================== workspace */
+  .app-main { padding-block: 40px 96px; }
+  .app-head h1 { font-size: clamp(30px, 3.4vw, 42px); font-weight: 800; line-height: 1.1; }
+  .app-head p { margin-top: 10px; color: var(--ink-2); font-size: 17px; max-width: 46em; }
+  .stack { display: grid; gap: 28px; }
+  .panel { background: var(--paper); border-radius: 20px; padding: 28px; box-shadow: 0 0 0 1px var(--stone); min-width: 0; }
+  .panel h2 { font-size: 22px; font-weight: 800; }
+  .welcome { background: var(--ink); color: var(--ivory); border-radius: 20px; padding: 28px; display: grid; grid-template-columns: 1fr auto; gap: 20px; }
+  .welcome h2 { color: var(--ivory); font-size: 24px; font-weight: 800; }
+  .welcome ol { margin: 14px 0 0; padding-left: 20px; color: #C9D1DE; display: grid; gap: 4px; }
+  .welcome .x { align-self: start; background: transparent; border: 1px solid rgba(255,255,255,.25); color: var(--ivory); border-radius: 999px; padding: 8px 14px; cursor: pointer; font: 500 13px var(--body); }
+  @media (max-width: 640px) { .welcome { grid-template-columns: 1fr; } }
+  .composer { display: grid; gap: 16px; }
+  .chipbox { min-height: 132px; border-radius: var(--r); background: var(--ivory); box-shadow: inset 0 0 0 1px var(--stone-2); padding: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; cursor: text; }
+  .chipbox:focus-within { box-shadow: inset 0 0 0 2px var(--ink); }
+  .dchip { display: inline-flex; gap: 6px; align-items: center; background: var(--paper); border-radius: 999px; padding: 6px 8px 6px 12px; font: 500 14px var(--body); box-shadow: 0 0 0 1px var(--stone-2); animation: pop .18s ease; }
+  .dchip.bad { background: var(--red-bg); box-shadow: none; color: var(--red); }
+  .dchip button { border: 0; background: transparent; cursor: pointer; color: var(--slate); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; padding: 0; font-size: 15px; line-height: 1; }
+  .dchip button:hover { background: var(--stone); color: var(--ink); }
+  @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .chipinput { flex: 1; min-width: 220px; border: 0; background: transparent; font: 400 16px var(--body); color: var(--ink); padding: 6px 4px; outline: none; }
+  .composer-foot { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--slate); }
+  .facts b { color: var(--ink); font-weight: 600; }
+  .twocol { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  @media (max-width: 960px) { .twocol { grid-template-columns: 1fr; } }
+  .plist { display: grid; }
+  .prow { display: grid; grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 2fr) auto; gap: 16px; align-items: center; padding: 16px 0; border-top: 1px solid var(--stone); text-decoration: none; color: inherit; }
+  .prow:hover { color: inherit; background: linear-gradient(90deg, transparent, var(--ivory) 10%, var(--ivory) 90%, transparent); }
+  .prow .co b { display: block; font: 700 17px var(--display); } .prow .co span { font-size: 13px; color: var(--slate); }
+  .prow .why { font-size: 14px; color: var(--ink-2); }
+  .prow .sc { font: 800 22px var(--display); font-variant-numeric: tabular-nums; text-align: right; min-width: 48px; }
+  @media (max-width: 720px) { .prow { grid-template-columns: 1fr auto; } .prow .why { grid-column: 1 / -1; } }
+  .pill { display: inline-flex; gap: 6px; align-items: center; font: 600 12.5px var(--body); padding: 5px 11px; border-radius: 999px; white-space: nowrap; background: var(--stone); color: var(--ink-2); }
+  .pill.qualified, .pill.sent, .pill.observed, .pill.done { background: var(--lime); color: var(--ink); }
+  .pill.review, .pill.inferred, .pill.dry_run, .pill.stopped, .pill.skipped { background: var(--amber-bg); color: var(--amber); }
+  .pill.failed, .pill.error, .pill.blocked { background: var(--red-bg); color: var(--red); }
+  .pill.running { background: var(--ink); color: var(--ivory); }
+  .pill.running::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .continue { display: grid; gap: 6px; padding: 20px; border-radius: var(--r); background: var(--ivory); box-shadow: inset 0 0 0 1px var(--stone); text-decoration: none; }
+  .continue b { font: 800 22px var(--display); }
+  .empty { padding: 32px 8px; text-align: center; color: var(--slate); }
 
-  /* phases */
-  .phases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-width: 260px; }
-  .phase { border-radius: 6px; padding: 4px 8px; font-size: 11.5px; font-weight: 500; background: var(--grey-bg); color: var(--grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .phase.done { background: var(--green-bg); color: var(--green); } .phase.running { background: var(--blue-bg); color: var(--blue); }
-  .phase.stopped { background: var(--grey-bg); color: var(--ink-2); } .phase.error { background: var(--red-bg); color: var(--red); }
-  .activity { font-size: 12px; color: var(--blue); margin-top: 4px; }
+  /* research progress */
+  .now { background: var(--ink); color: var(--ivory); border-radius: 20px; padding: 28px; display: grid; gap: 18px; }
+  .now h2 { color: var(--ivory); font-size: 26px; font-weight: 800; }
+  .now .doing { color: #C9D1DE; font-size: 16px; }
+  .rail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rail div { display: grid; gap: 8px; font-size: 13px; color: #A9B4C6; }
+  .rail i { display: block; height: 6px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; position: relative; }
+  .rail .done i { background: var(--lime); } .rail .done { color: var(--ivory); }
+  .rail .active { color: var(--ivory); }
+  .rail .active i::after { content: ""; position: absolute; inset: 0; width: 40%; background: var(--lime); border-radius: 999px; animation: slide 1.4s ease-in-out infinite; }
+  @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+  .queue { display: flex; flex-wrap: wrap; gap: 8px; }
+  .queue span { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.08); color: #C9D1DE; }
+  .queue span.done { background: rgba(200,243,107,.18); color: var(--lime); } .queue span.cur { background: var(--lime); color: var(--ink); font-weight: 600; }
+  .summary { border-radius: 20px; padding: 28px; background: var(--lime); display: grid; gap: 14px; animation: rise .5s ease both; }
+  .summary h2 { font-size: 28px; font-weight: 800; }
+  .summary .nums { display: flex; flex-wrap: wrap; gap: 28px; }
+  .summary .nums b { display: block; font: 800 40px/1 var(--display); font-variant-numeric: tabular-nums; } .summary .nums span { font-size: 13px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fchip { border: 0; background: var(--paper); box-shadow: 0 0 0 1px var(--stone-2); border-radius: 999px; padding: 8px 14px; font: 500 14px var(--body); cursor: pointer; color: var(--ink-2); }
+  .fchip[aria-pressed="true"] { background: var(--ink); color: var(--ivory); box-shadow: none; }
+  .retry { margin-top: 6px; }
 
   /* report */
-  .dossier-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; justify-content: space-between; }
-  .score { text-align: right; } .score b { font-size: 40px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; } .score span { display: block; color: var(--muted); font-size: 12px; }
-  .sec-title { display: flex; gap: 10px; align-items: baseline; margin-bottom: 12px; } .sec-title .n { color: var(--primary); font-weight: 600; font-size: 12px; }
-  .kv { display: grid; grid-template-columns: minmax(130px, max-content) 1fr; gap: 6px 18px; margin: 0; }
-  .kv dt { color: var(--muted); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .kv dd { margin-bottom: 6px; } }
-  .rows { display: grid; gap: 0; }
-  .rubric { display: grid; grid-template-columns: minmax(0, 1fr) 90px 170px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .bar { height: 6px; border-radius: 3px; background: var(--grey-bg); overflow: hidden; } .bar i { display: block; height: 100%; background: var(--primary); }
-  @media (max-width: 640px) { .rubric { grid-template-columns: 1fr; gap: 4px; } }
-  .trail { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-  .trail li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
-  .trail .tdot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--mint); color: var(--primary); }
-  .ev { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); } .ev li { margin-bottom: 4px; }
-  q { color: var(--muted); }
-  .two { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .box { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 14px; background: #FBFDFC; min-width: 0; }
-  .box h3 { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-  .email { white-space: pre-wrap; font: 400 14px/1.65 var(--font); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 16px 18px; margin: 8px 0 0; }
-  details.trace { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
-  details.trace summary { cursor: pointer; color: var(--ink-2); font-weight: 500; font-size: 13px; }
-  .trace-body { margin-top: 8px; font-size: 12.5px; color: var(--ink-2); display: grid; gap: 10px; }
-  .secret { display: inline-flex; align-items: center; gap: 6px; }
-  .eye { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border-radius: 6px; border: 1px solid var(--line-strong);
-         background: var(--surface); color: var(--ink-2); cursor: pointer; flex: none; }
-  .eye:hover { background: var(--mint); }
-  .empty { padding: 28px; text-align: center; color: var(--muted); }
-  .doc p, .doc li { color: var(--ink-2); max-width: 75ch; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  .rep-hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; padding-block: 12px 8px; }
+  .rep-hero h1 { font-size: clamp(40px, 5.6vw, 64px); font-weight: 800; line-height: 1; }
+  .rep-hero .meta { margin-top: 12px; color: var(--slate); font-size: 14px; }
+  .rep-hero .verdict { margin-top: 18px; font: 600 clamp(18px, 2vw, 22px)/1.45 var(--display); max-width: 36em; color: var(--ink-2); letter-spacing: -.01em; }
+  @media (max-width: 760px) { .rep-hero { grid-template-columns: 1fr; } }
+  .keyfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--stone-2); border-bottom: 1px solid var(--stone-2); }
+  .keyfacts > div { padding: 18px 18px 18px 0; } .keyfacts > div + div { padding-left: 18px; border-left: 1px solid var(--stone); }
+  .keyfacts .k { font: 600 11.5px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--slate); }
+  .keyfacts .v { margin-top: 6px; font: 700 17px var(--display); overflow-wrap: anywhere; }
+  @media (max-width: 760px) { .keyfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .keyfacts > div:nth-child(3) { padding-left: 0; border-left: 0; } }
+  .uncertain { border-radius: var(--r); background: var(--amber-bg); padding: 18px 22px; color: #4A3608; }
+  .uncertain h3 { font-size: 15px; font-weight: 800; color: #4A3608; }
+  .uncertain ul { margin: 8px 0 0; padding-left: 20px; font-size: 15px; }
+  .chapter { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; padding-top: 40px; border-top: 1px solid var(--stone-2); }
+  .chapter > header .n { font: 800 44px/1 var(--display); color: var(--stone-2); }
+  .chapter > header h2 { font-size: 22px; font-weight: 800; margin-top: 8px; }
+  .chapter > header p { margin-top: 8px; font-size: 14px; color: var(--slate); }
+  @media (max-width: 860px) { .chapter { grid-template-columns: 1fr; gap: 16px; } }
+  .reveal { animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .kv { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 10px 24px; margin: 0; }
+  .kv dt { color: var(--slate); } .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; gap: 2px; } .kv dd { margin-bottom: 10px; } }
+  .rub { display: grid; grid-template-columns: minmax(0, 1fr) 72px 170px; gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--stone); }
+  .rub .name { font-weight: 600; } .rub .name small { font-weight: 400; color: var(--slate); }
+  .rub .bar { height: 8px; border-radius: 999px; background: var(--stone); overflow: hidden; margin-top: 8px; }
+  .rub .bar i { display: block; height: 100%; background: var(--ink); border-radius: 999px; width: 0; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+  .rub .pts { font: 700 16px var(--display); text-align: right; font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { .rub { grid-template-columns: 1fr auto; } .rub .pill { grid-column: 1 / -1; justify-self: start; } }
+  .evlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .ev { position: relative; display: block; padding: 12px 14px; border-radius: var(--r-sm); background: var(--ivory); text-decoration: none; color: inherit; }
+  .ev:hover, .ev:focus-visible { color: inherit; background: #F0F2EA; }
+  .ev .c { font-weight: 500; } .ev .s { font-size: 12.5px; color: var(--slate); margin-top: 2px; }
+  .ev .tip { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); background: var(--ink); color: var(--ivory); border-radius: var(--r-sm); padding: 12px 14px; font-size: 13.5px;
+             line-height: 1.5; opacity: 0; pointer-events: none; transform: translateY(4px); transition: opacity .15s, transform .15s; z-index: 5; box-shadow: 0 20px 40px -20px rgba(0,0,0,.5); }
+  .ev .tip em { display: block; margin-top: 6px; font-style: normal; color: var(--lime); font-size: 12px; }
+  .ev:hover .tip, .ev:focus-visible .tip { opacity: 1; transform: none; }
+  .trail { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+  .trail li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; padding-bottom: 20px; position: relative; }
+  .trail li::before { content: ""; position: absolute; left: 17px; top: 34px; bottom: 0; width: 2px; background: var(--stone); }
+  .trail li:last-child::before { display: none; }
+  .trail .tn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 800 14px var(--display); background: var(--paper); box-shadow: 0 0 0 1px var(--stone-2); }
+  .trail .tn.up { background: var(--lime); box-shadow: none; }
+  .trail h3 { font-size: 16px; font-weight: 700; } .trail p { font-size: 14.5px; color: var(--ink-2); margin-top: 4px; }
+  .delta { font: 700 13px var(--display); padding: 2px 8px; border-radius: 999px; background: var(--stone); margin-left: 8px; }
+  .delta.up { background: var(--lime); }
+  .cards2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card { background: var(--paper); border-radius: var(--r); padding: 20px; box-shadow: 0 0 0 1px var(--stone); min-width: 0; }
+  .card .k { font: 600 11.5px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--slate); margin-bottom: 10px; }
+  .card .big { font: 800 24px var(--display); }
+  .secret { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; }
+  .eye { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--ivory); box-shadow: inset 0 0 0 1px var(--stone-2); display: inline-grid; place-items: center; cursor: pointer; color: var(--ink-2); padding: 0; }
+  .eye:hover { background: var(--stone); }
+  .mail { background: var(--paper); border-radius: var(--r); box-shadow: 0 0 0 1px var(--stone); overflow: hidden; }
+  .mail-head { padding: 16px 20px; border-bottom: 1px solid var(--stone); display: grid; gap: 6px; font-size: 14px; }
+  .mail-head .row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; } .mail-head .row span:first-child { color: var(--slate); }
+  .mail pre { margin: 0; padding: 22px 20px; white-space: pre-wrap; font: 400 16px/1.7 var(--body); }
+  .mail-foot { padding: 14px 20px; border-top: 1px solid var(--stone); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--ivory); }
+  details.trace { margin-top: 18px; }
+  details.trace summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--slate); }
+  .trace-body { margin-top: 10px; display: grid; gap: 12px; font-size: 13.5px; color: var(--ink-2); padding: 14px; border-radius: var(--r-sm); background: var(--ivory); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--stone); vertical-align: top; }
+  th { font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--slate); }
+  td.num { text-align: right; }
+  .tablewrap { overflow-x: auto; }
+  input[type=search], select { font: 400 15px var(--body); color: var(--ink); background: var(--paper); border: 0; box-shadow: inset 0 0 0 1px var(--stone-2); border-radius: 999px; padding: 10px 16px; }
+  input[type=search]:focus, select:focus { outline: none; box-shadow: inset 0 0 0 2px var(--ink); }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; background: var(--ink); color: var(--ivory);
+           padding: 12px 18px; border-radius: 999px; font: 500 14px var(--body); transition: opacity .2s, transform .2s; z-index: 50; pointer-events: none; display: inline-flex; gap: 8px; align-items: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast .dot { background: var(--lime); }
+  .banner { border-radius: var(--r); padding: 16px 20px; display: grid; gap: 6px; }
+  .banner.err { background: var(--red-bg); color: var(--red); }
+  .banner.info { background: var(--paper); box-shadow: 0 0 0 1px var(--stone); }
+  .skeleton { height: 120px; border-radius: 20px; background: linear-gradient(90deg, var(--stone) 0%, #F0F1EC 50%, var(--stone) 100%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-arrow" viewBox="0 0 256 256"><path fill="currentColor" d="m224.5 136.5-72 72a12 12 0 0 1-17-17L187 140H40a12 12 0 0 1 0-24h147l-51.5-51.5a12 12 0 0 1 17-17l72 72a12 12 0 0 1 0 17Z"/></symbol>
   <symbol id="i-check" viewBox="0 0 256 256"><path fill="currentColor" d="M232.5 68.5l-128 128a12 12 0 0 1-17 0l-56-56a12 12 0 0 1 17-17L96 171l119.5-119.5a12 12 0 0 1 17 17Z"/></symbol>
-  <symbol id="i-x" viewBox="0 0 256 256"><path fill="currentColor" d="M208.5 191.5a12 12 0 0 1-17 17L128 145l-63.5 63.5a12 12 0 0 1-17-17L111 128 47.5 64.5a12 12 0 0 1 17-17L128 111l63.5-63.5a12 12 0 0 1 17 17L145 128Z"/></symbol>
   <symbol id="i-alert" viewBox="0 0 256 256"><path fill="currentColor" d="M236.8 188.1 149.4 36.2a24.8 24.8 0 0 0-42.8 0L19.2 188.1a23.5 23.5 0 0 0 0 23.7A24.4 24.4 0 0 0 40.6 224h174.8a24.4 24.4 0 0 0 21.4-12.2 23.5 23.5 0 0 0 0-23.7ZM120 104a8 8 0 0 1 16 0v40a8 8 0 0 1-16 0Zm8 88a12 12 0 1 1 12-12 12 12 0 0 1-12 12Z"/></symbol>
-  <symbol id="i-dot" viewBox="0 0 256 256"><circle cx="128" cy="128" r="56" fill="currentColor"/></symbol>
-  <symbol id="i-spin" viewBox="0 0 256 256"><path fill="currentColor" d="M136 32v32a8 8 0 0 1-16 0V32a8 8 0 0 1 16 0Zm88 88h-32a8 8 0 0 0 0 16h32a8 8 0 0 0 0-16Zm-45.1 47.6a8 8 0 0 0-11.3 11.3l22.6 22.6a8 8 0 0 0 11.3-11.3ZM128 184a8 8 0 0 0-8 8v32a8 8 0 0 0 16 0v-32a8 8 0 0 0-8-8Zm-50.9-16.4-22.6 22.6a8 8 0 0 0 11.3 11.3l22.6-22.6a8 8 0 0 0-11.3-11.3ZM72 128a8 8 0 0 0-8-8H32a8 8 0 0 0 0 16h32a8 8 0 0 0 8-8Zm-5.2-73.5a8 8 0 0 0-11.3 11.3l22.6 22.6a8 8 0 0 0 11.3-11.3Z"/></symbol>
-  <symbol id="i-grid" viewBox="0 0 256 256"><path fill="currentColor" d="M104 40H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16Zm0 64H56V56h48Zm96-64h-48a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16V56a16 16 0 0 0-16-16Zm0 64h-48V56h48Zm-96 32H56a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16v-48a16 16 0 0 0-16-16Zm0 64H56v-48h48Zm96-64h-48a16 16 0 0 0-16 16v48a16 16 0 0 0 16 16h48a16 16 0 0 0 16-16v-48a16 16 0 0 0-16-16Zm0 64h-48v-48h48Z"/></symbol>
-  <symbol id="i-plus" viewBox="0 0 256 256"><path fill="currentColor" d="M228 128a12 12 0 0 1-12 12h-76v76a12 12 0 0 1-24 0v-76H40a12 12 0 0 1 0-24h76V40a12 12 0 0 1 24 0v76h76a12 12 0 0 1 12 12Z"/></symbol>
-  <symbol id="i-list" viewBox="0 0 256 256"><path fill="currentColor" d="M224 128a8 8 0 0 1-8 8H104a8 8 0 0 1 0-16h112a8 8 0 0 1 8 8ZM104 72h112a8 8 0 0 0 0-16H104a8 8 0 0 0 0 16Zm112 112H104a8 8 0 0 0 0 16h112a8 8 0 0 0 0-16ZM64 116H48a12 12 0 0 0 0 24h16a12 12 0 0 0 0-24Zm0-64H48a12 12 0 0 0 0 24h16a12 12 0 0 0 0-24Zm0 128H48a12 12 0 0 0 0 24h16a12 12 0 0 0 0-24Z"/></symbol>
-  <symbol id="i-target" viewBox="0 0 256 256"><path fill="currentColor" d="M221.9 88.4a8 8 0 0 0-14.9 5.8 87.9 87.9 0 1 1-45.2-48.4 8 8 0 0 0 7-14.4 104.1 104.1 0 1 0 53.1 57ZM128 72a8 8 0 0 0 0-16 72 72 0 1 0 72 72 8 8 0 0 0-16 0 56 56 0 1 1-56-56Zm0 32a8 8 0 0 0 0-16 40 40 0 1 0 40 40 8 8 0 0 0-16 0 24 24 0 1 1-24-24Zm-5.7 29.7a8 8 0 0 0 11.4 0l56-56a8 8 0 0 0-11.4-11.4l-56 56a8 8 0 0 0 0 11.4Z"/></symbol>
-  <symbol id="i-pulse" viewBox="0 0 256 256"><path fill="currentColor" d="M240 128a8 8 0 0 1-8 8h-36.9l-28 56a8 8 0 0 1-7.2 4.4h-.4a8 8 0 0 1-7.1-5.1L102.7 69.4 79 125.1a8 8 0 0 1-7.4 4.9H24a8 8 0 0 1 0-16h42.4l29.2-68.3a8 8 0 0 1 14.8.3l51.5 120.2 22.9-45.8a8 8 0 0 1 7.2-4.4H232a8 8 0 0 1 8 8Z"/></symbol>
-  <symbol id="i-book" viewBox="0 0 256 256"><path fill="currentColor" d="M232 48h-64a32 32 0 0 0-32 32v87.4a8 8 0 0 1-16 0V80a32 32 0 0 0-32-32H24a8 8 0 0 0-8 8v144a8 8 0 0 0 8 8h72a24 24 0 0 1 24 24 8 8 0 0 0 16 0 24 24 0 0 1 24-24h72a8 8 0 0 0 8-8V56a8 8 0 0 0-8-8Z"/></symbol>
-  <symbol id="i-plane" viewBox="0 0 256 256"><path fill="currentColor" d="M227.3 28.7a16 16 0 0 0-15.6-4.1L23.6 77.9a16 16 0 0 0-2.5 29.9l83.1 41.1 41.1 83.1a15.9 15.9 0 0 0 14.3 8.9h1.5a16 16 0 0 0 14.1-11.6l53.2-188.1a16 16 0 0 0-4.1-15.6Zm-66.5 194.4-38.5-77.9 46.4-46.4a8 8 0 0 0-11.3-11.3l-46.4 46.4-77.9-38.5L221 41Z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 256 256"><path fill="currentColor" d="M216 32H88a8 8 0 0 0-8 8v40H40a8 8 0 0 0-8 8v128a8 8 0 0 0 8 8h128a8 8 0 0 0 8-8v-40h40a8 8 0 0 0 8-8V40a8 8 0 0 0-8-8Zm-56 176H48V96h112Zm48-48h-32V88a8 8 0 0 0-8-8H96V48h112Z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 256 256"><path fill="currentColor" d="M227.3 28.7a16 16 0 0 0-15.6-4.1L23.6 77.9a16 16 0 0 0-2.5 29.9l83.1 41.1 41.1 83.1a15.9 15.9 0 0 0 14.3 8.9h1.5a16 16 0 0 0 14.1-11.6l53.2-188.1a16 16 0 0 0-4.1-15.6Zm-66.5 194.4-38.5-77.9 46.4-46.4a8 8 0 0 0-11.3-11.3l-46.4 46.4-77.9-38.5L221 41Z"/></symbol>
   <symbol id="i-eye" viewBox="0 0 256 256"><path fill="currentColor" d="M247.3 124.8c-.3-.8-8.8-19.6-27.6-38.5C194.6 61.3 162.9 48 128 48S61.4 61.3 36.3 86.3C17.5 105.2 9 124 8.7 124.8a8 8 0 0 0 0 6.5c.3.8 8.8 19.6 27.6 38.4C61.4 194.7 93.1 208 128 208s66.6-13.3 91.7-38.3c18.8-18.8 27.3-37.6 27.6-38.4a8 8 0 0 0 0-6.5ZM128 192c-30.8 0-57.7-11.2-79.9-33.3A130.3 130.3 0 0 1 25 128a130.3 130.3 0 0 1 23.1-30.8C70.3 75.2 97.2 64 128 64s57.7 11.2 79.9 33.2A130.3 130.3 0 0 1 231 128c-7.2 13.5-38.6 64-103 64Zm0-112a48 48 0 1 0 48 48 48 48 0 0 0-48-48Zm0 80a32 32 0 1 1 32-32 32 32 0 0 1-32 32Z"/></symbol>
   <symbol id="i-eye-off" viewBox="0 0 256 256"><path fill="currentColor" d="M53.9 34.6a8 8 0 0 0-11.8 10.8l19.2 21.1C25 88.8 9.4 123.2 8.7 124.8a8 8 0 0 0 0 6.5c.3.8 8.8 19.6 27.6 38.4C61.4 194.7 93.1 208 128 208a127.1 127.1 0 0 0 52.1-10.8l22 24.2a8 8 0 1 0 11.8-10.8Zm47.3 74.8 41.7 45.8a32 32 0 0 1-41.7-45.8ZM128 192c-30.8 0-57.7-11.2-79.9-33.3A130.3 130.3 0 0 1 25 128c4.7-8.8 19.8-33.5 47.3-49.4l18 19.8a48 48 0 0 0 63.7 70.1l14.7 16.2A112 112 0 0 1 128 192Zm119.3-60.8c-.4.9-10.5 23.3-33.4 43.8a8 8 0 1 1-10.6-11.9A131 131 0 0 0 231 128a130.3 130.3 0 0 0-23.1-30.8C185.7 75.2 158.8 64 128 64a118.3 118.3 0 0 0-19.4 1.6 8 8 0 1 1-2.6-15.8A134.3 134.3 0 0 1 128 48c34.9 0 66.6 13.3 91.7 38.3 18.8 18.9 27.3 37.7 27.6 38.5a8 8 0 0 1 0 6.4Z"/></symbol>
 </svg>
 
-<div class="shell">
-  <aside class="side">
-    <div class="brand">
-      <span class="brand-mark"><svg class="icon"><use href="#i-plane"/></svg></span>
-      <div><strong>Outbound Intelligence</strong><span>Sprinto workspace</span></div>
-    </div>
-    <nav class="nav" aria-label="Workspace">
-      <a href="#overview" data-route="overview"><svg class="icon"><use href="#i-grid"/></svg>Overview</a>
-      <a href="#new" data-route="new"><svg class="icon"><use href="#i-plus"/></svg>New research run</a>
-      <a href="#runs" data-route="runs"><svg class="icon"><use href="#i-list"/></svg>Past runs</a>
-      <a href="#icp" data-route="icp"><svg class="icon"><use href="#i-target"/></svg>ICP &amp; scoring</a>
-      <a href="#health" data-route="health"><svg class="icon"><use href="#i-pulse"/></svg>System health</a>
-      <div class="sep"></div>
-      <a href="#docs" data-route="docs"><svg class="icon"><use href="#i-book"/></svg>How it works</a>
-    </nav>
-    <div class="side-foot">
-      <span class="pill" id="sideHealth"><span class="dot"></span>Checking services…</span>
-      <span class="pill" id="sideSend"><span class="dot"></span>Email mode</span>
-      <span>MESA · Term 2 · AI Case 2</span>
-    </div>
-  </aside>
-  <main id="view" tabindex="-1" aria-live="polite"></main>
-</div>
+<div id="root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// ===================================================================================================== helpers
-// All text goes in as textContent: scraped content is untrusted.
+// ============================================================================================= helpers
+// All dynamic text is inserted as textContent: scraped website content is untrusted.
 function el(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -223,11 +304,11 @@ function icon(id) {
   const u = document.createElementNS("http://www.w3.org/2000/svg", "use"); u.setAttribute("href", "#" + id); s.append(u); return s;
 }
 const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : null;
-const link = (u, text) => safeUrl(u) ? el("a", {href: u, target: "_blank", rel: "noopener noreferrer"}, text || u) : el("code", {}, u || "");
-const host = u => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
-const pathOf = u => { try { return new URL(u).pathname || "/"; } catch { return u; } };
-const fmtDate = iso => { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, {day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"}); };
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u || ""; } };
+const pathOf = u => { try { return new URL(u).pathname || "/"; } catch { return u || ""; } };
+const fmtDate = iso => { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleDateString(undefined, {day: "numeric", month: "long", year: "numeric"}); };
 const runDate = id => (id || "").replace(/^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2}).*/, "$1-$2-$3T$4:$5:$6");
+const store = { get(k) { try { return JSON.parse(localStorage.getItem("so:" + k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem("so:" + k, JSON.stringify(v)); } catch {} } };
 async function api(path, opts = {}) {
   const res = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
   const isJson = (res.headers.get("content-type") || "").includes("json");
@@ -235,551 +316,639 @@ async function api(path, opts = {}) {
   if (!res.ok) throw new Error((data && data.detail) || `Request failed (HTTP ${res.status})`);
   return data;
 }
-const STATUS = {
-  qualified: ["Qualified", "i-check"], rejected: ["Rejected", "i-x"], review: ["Needs review", "i-alert"],
-  failed: ["Research failed", "i-alert"], running: ["Researching", "i-spin"], pending: ["Waiting", "i-dot"],
-  done: ["Done", "i-check"], stopped: ["Stopped", "i-dot"], error: ["Error", "i-alert"], sent: ["Sent", "i-check"],
-  dry_run: ["Dry run", "i-dot"], blocked: ["Blocked", "i-x"], skipped: ["Skipped", "i-dot"],
-  observed: ["Observed", "i-check"], inferred: ["Inferred", "i-alert"], insufficient_data: ["Needs review", "i-alert"],
-};
-function badge(status) {
-  const [text, ic] = STATUS[status] || [String(status || "-").replace(/_/g, " "), "i-dot"];
-  return el("span", {class: "status s-" + (status || "none")}, icon(ic), text);
+let toastTimer;
+function toast(text) {
+  const t = document.getElementById("toast");
+  t.replaceChildren(el("span", {class: "dot"}), text); t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
 }
+const LABEL = {qualified: "Qualified", rejected: "Rejected", review: "Needs review", failed: "Research failed", running: "Researching", pending: "Queued",
+  done: "Done", stopped: "Stopped", error: "Error", sent: "Sent", dry_run: "Dry run", blocked: "Blocked", skipped: "Skipped", observed: "Observed", inferred: "Inferred"};
+const pill = s => el("span", {class: "pill " + (s || "")}, s === "qualified" || s === "sent" || s === "observed" ? icon("i-check") : s === "review" || s === "failed" || s === "inferred" ? icon("i-alert") : null, LABEL[s] || String(s || "-").replace(/_/g, " "));
 function secret(text) {
-  const value = el("span", {}, "•••••••••");
+  const value = el("span", {}, "••••••••••");
   const btn = el("button", {class: "eye", type: "button", "aria-label": "Show contact", title: "Show contact"}, icon("i-eye"));
   let shown = false;
-  btn.onclick = () => { shown = !shown; value.textContent = shown ? text : "•••••••••"; btn.replaceChildren(icon(shown ? "i-eye-off" : "i-eye"));
+  btn.onclick = () => { shown = !shown; value.textContent = shown ? text : "••••••••••"; btn.replaceChildren(icon(shown ? "i-eye-off" : "i-eye"));
     btn.setAttribute("aria-label", shown ? "Hide contact" : "Show contact"); btn.title = shown ? "Hide contact" : "Show contact"; };
   return el("span", {class: "secret"}, value, btn);
 }
-function errorBox(message, retry) {
-  return el("div", {class: "banner err"}, icon("i-alert"), el("div", {}, el("strong", {}, "Something went wrong. "), message,
-    retry ? el("div", {style: "margin-top:8px"}, el("button", {class: "btn ghost sm", onclick: retry}, "Try again")) : null));
+function countUp(node, to, ms = 900) {
+  const ring = node.closest(".ring");
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { node.textContent = to; if (ring) ring.style.setProperty("--p", to); return; }
+  const t0 = performance.now();
+  const tick = now => { const k = Math.min(1, (now - t0) / ms), v = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    node.textContent = v; if (ring) ring.style.setProperty("--p", v); if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
 }
-const loading = text => el("div", {class: "card empty"}, icon("i-spin"), " ", text || "Loading…");
+function ring(score, label, big) {
+  const b = el("b", {}, "0");
+  const r = el("div", {class: "ring" + (big ? " big" : "")}, el("div", {}, el("div", {}, b, el("span", {}, label))));
+  requestAnimationFrame(() => countUp(b, score || 0));
+  return r;
+}
+const errBox = (msg, retry) => el("div", {class: "banner err"}, el("strong", {}, "That didn't work."), el("span", {}, msg),
+  retry ? el("div", {}, el("button", {class: "btn ghost sm", onclick: retry}, "Try again")) : null);
 
-// ===================================================================================================== state + router
-const STEPS = {1: "Scrape website", 2: "Extract company profile", 3: "Evaluate ICP criteria", 4: "Find decision-maker", 5: "Identify pain points", 6: "Draft personalised email", 7: "Send test to owner"};
+// ============================================================================================= state
+const STEPS = {1: "Reading the website", 2: "Building the company profile", 3: "Scoring against the ICP", 4: "Finding the decision-maker", 5: "Working out pain points", 6: "Drafting the email", 7: "Sending a test"};
+const DOING = {
+  1: "Fetching the homepage plus pricing, security, customers and careers pages, respecting robots.txt.",
+  2: "Turning page text into a company profile. Every fact must quote the page it came from.",
+  3: "Answering 20 ICP questions with evidence. If funding, headcount or compliance status is missing, the agent researches further.",
+  4: "Looking up the right buyer with Hunter.io. This only happens for qualified companies.",
+  5: "Working out two likely pain points for this person, labelled observed or inferred.",
+  6: "Drafting a short email around one verified hook, then checking it against the rules."};
 const FILES = {1: "01_scrape", 2: "02_extract", 3: "03_qualify", 4: "04_poc", 5: "05_pain", 6: "06_email", 7: "07_send"};
-const PHASES = [["Discovery", [1, 2]], ["Qualification", [3]], ["Outreach", [4, 5, 6]]];
-let health = null, icpCache = null, quota = null;
+const PHASES = [["Discover", [1, 2]], ["Evaluate", [3]], ["Reach", [4, 5, 6]]];
+let health = null, icp = null, quota = null;
 const runs = {};
-const pastFilter = {q: "", outcome: "all", sort: "new"};
-let runFilter = "all";
+const ui = {runFilter: "all", hist: {q: "", sort: "new"}};
+const icpReady = () => icp ? Promise.resolve(icp) : api("/api/icp").then(x => (icp = x));
+async function getRun(id) {
+  if (!runs[id]) { const r = await api(`/api/runs/${encodeURIComponent(id)}`); runs[id] = {domains: r.domains, artifacts: r.artifacts, briefs: r.briefs || {}, running: {}, current: null}; }
+  return runs[id];
+}
 
+// ============================================================================================= router
 function route() {
-  const [name, a, b] = (location.hash.replace(/^#/, "") || "overview").split("/").map(decodeURIComponent);
-  document.querySelectorAll(".nav a").forEach(x => x.removeAttribute("aria-current"));
-  const active = {run: "runs", report: "runs"}[name] || name;
-  const nav = document.querySelector(`.nav a[data-route="${active}"]`); if (nav) nav.setAttribute("aria-current", "page");
-  const pages = {overview: viewOverview, new: viewNew, runs: viewRuns, run: () => viewRun(a), report: () => viewReport(a, b), icp: viewIcp, health: viewHealth, docs: viewDocs};
-  const view = document.getElementById("view");
-  view.replaceChildren((pages[name] || viewOverview)());
-}
-window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
-function rerenderIf(name, id) {
-  const h = location.hash.replace(/^#/, "").split("/").map(decodeURIComponent);
-  if (h[0] === name && (!id || h[1] === id)) route();
-}
-async function loadHealth() {
-  try { health = await api("/api/health"); } catch { health = null; }
-  const ok = health && health.database === "ok" && health.gemini === "configured";
-  document.getElementById("sideHealth").replaceChildren(el("span", {class: "dot " + (ok ? "ok" : health ? "warn" : "bad")}), ok ? "System operational" : health ? "Partly configured" : "Server unreachable");
-  document.getElementById("sideSend").replaceChildren(el("span", {class: "dot " + (health && health.send_enabled ? "ok" : "warn")}),
-    health && health.send_enabled ? "Test emails: owner inbox only" : "Dry run: no emails sent");
-}
-async function getRun(runId) {
-  if (!runs[runId]) {
-    const r = await api(`/api/runs/${encodeURIComponent(runId)}`);
-    runs[runId] = {domains: r.domains, artifacts: r.artifacts, briefs: r.briefs || {}, running: {}};
+  const parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+  const root = document.getElementById("root");
+  let view;
+  if (!parts.length || parts[0] !== "app") view = homePage();
+  else {
+    const [, sub, a, b] = parts;
+    const pages = {undefined: appHome, run: () => runPage(a), report: () => reportPage(a, b), history: historyPage, icp: icpPage, system: systemPage};
+    view = appShell(sub || "research", (pages[sub] || appHome)());
   }
-  return runs[runId];
+  root.replaceChildren(view);
+  document.title = parts[0] === "app" ? "Workspace · Sprinto Outbound" : "Sprinto Outbound";
 }
-const icpReady = () => icpCache ? Promise.resolve(icpCache) : api("/api/icp").then(x => (icpCache = x));
+let lastHash = location.hash;
+window.addEventListener("hashchange", () => {
+  const sameReport = location.hash.split("/").slice(0, 2).join("/") === lastHash.split("/").slice(0, 2).join("/") && location.hash.startsWith("#app/report");
+  lastHash = location.hash; route();
+  if (!location.hash.startsWith("#how") && !sameReport) window.scrollTo(0, 0);
+});
+function rerenderIf(kind, id) {
+  const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
+  if (p[0] === "app" && p[1] === kind && (!id || p[2] === id)) route();
+}
 
-// ===================================================================================================== Overview
-function viewOverview() {
-  const page = el("div", {class: "page"});
-  page.append(el("div", {class: "page-head"},
-    el("div", {}, el("h1", {}, "Overview"), el("p", {}, "Which companies are worth pursuing, why, and who to contact.")),
-    el("a", {class: "btn", href: "#new"}, icon("i-plus"), "New research run")));
-  const body = el("div", {class: "page"}, loading("Loading overview…"));
-  page.append(body);
+// ============================================================================================= homepage
+function homePage() {
+  const top = el("header", {class: "topbar"}, el("div", {class: "wrap"},
+    el("a", {class: "wordmark", href: "#/"}, el("i"), "SPRINTO OUTBOUND"),
+    el("nav", {class: "topnav home", "aria-label": "Site"}, el("a", {href: "#how", onclick: e => { e.preventDefault(); document.getElementById("how").scrollIntoView(); }}, "How it works"),
+      el("a", {href: "#trust", onclick: e => { e.preventDefault(); document.getElementById("trust").scrollIntoView(); }}, "Why trust it"),
+      el("a", {href: "#results", onclick: e => { e.preventDefault(); document.getElementById("results").scrollIntoView(); }}, "Results")),
+    el("div", {class: "right"}, el("a", {class: "btn sm", href: "#app"}, "Open workspace", icon("i-arrow")))));
+  addEventListener("scroll", () => top.classList.toggle("scrolled", scrollY > 8), {passive: true});
+
+  // live example card, filled from the latest real qualified prospect
+  const demo = el("div", {class: "demo", "aria-live": "polite"}, el("span", {class: "tag"}, "Real result"), el("div", {class: "skeleton"}));
+  const statNodes = {};
+  const hero = el("section", {class: "hero"}, el("div", {class: "gridbg"}), el("div", {class: "wrap hero-grid"},
+    el("div", {},
+      el("div", {class: "eyebrow"}, "Prospect intelligence for Sprinto"),
+      el("h1", {}, "Find the right companies. ", el("span", {class: "hl"}, "Know why."), " Reach the right people."),
+      el("p", {class: "lede"}, "Turn a list of company domains into evidence-backed prospect intelligence and a personalised first email, without hours of manual research."),
+      el("div", {class: "ctas"}, el("a", {class: "btn lime", href: "#app"}, "Explore the workspace", icon("i-arrow")),
+        el("a", {class: "btn ghost", href: "#how", onclick: e => { e.preventDefault(); document.getElementById("how").scrollIntoView(); }}, "See how it works"))),
+    demo));
+
+  const compare = el("section", {class: "band dark"}, el("div", {class: "wrap"},
+    el("div", {class: "section-head"}, el("div", {class: "eyebrow muted"}, "The problem"),
+      el("h2", {}, "Outbound research doesn't scale by hand, and quality drops by Friday."),
+      el("p", {}, "Sprinto's Growth Lead spent 15 to 20 minutes per company: researching, finding the right person, writing a first email. By the end of a list of 8 to 15 companies, the writing gets tired.")),
+    el("div", {class: "compare"},
+      el("div", {}, el("b", {}, "15–20 min"), el("p", {class: "muted"}, "per company, by hand, with judgement fading as the list gets longer")),
+      el("div", {class: "after"}, el("b", {}, "< 2 min"), el("p", {class: "muted"}, "per company, with every decision tied to a source you can open")))));
+
+  const how = el("section", {class: "band", id: "how"}, el("div", {class: "wrap"},
+    el("div", {class: "section-head"}, el("div", {class: "eyebrow"}, "How it works"), el("h2", {}, "From raw company data to actionable intelligence.")),
+    el("div", {class: "steps3"},
+      el("div", {}, el("div", {class: "n"}, "01"), el("h3", {}, "Discover"), el("p", {}, "Reads each company's own website: pricing, security, customers, careers. Every fact in the profile quotes the page it came from."),
+        el("div", {class: "sub"}, "Public pages only · robots.txt respected · one request a second")),
+      el("div", {}, el("div", {class: "n"}, "02"), el("h3", {}, "Evaluate"), el("p", {}, "Scores the company against Sprinto's ICP. When funding, headcount or compliance status is missing, an agent goes and finds it."),
+        el("div", {class: "sub"}, "20 criteria · up to 3 extra research rounds · honest \"needs review\"")),
+      el("div", {}, el("div", {class: "n"}, "03"), el("h3", {}, "Reach"), el("p", {}, "Finds the right buyer, works out what they're likely struggling with, and drafts a short email around one verifiable fact."),
+        el("div", {class: "sub"}, "Qualified companies only · test emails go to you, never to a prospect")))));
+
+  const trust = el("section", {class: "band", id: "trust", style: "padding-top:0"}, el("div", {class: "wrap"},
+    el("div", {class: "section-head"}, el("div", {class: "eyebrow"}, "Why you can trust it"), el("h2", {}, "The AI reads. Python decides.")),
+    el("div", {class: "trust"},
+      el("article", {}, el("h3", {}, "No quote, no points"), el("p", {}, "The model only answers yes, no or unknown with a quote. A point counts only if that quote is really on a page we fetched."),
+        el("div", {class: "mock"}, el("div", {class: "row"}, el("span", {}, "\"Series B round, August 2025\""), pill("qualified")), el("div", {class: "row"}, el("span", {}, "\"raised $40M from Accel\""), el("span", {class: "pill failed"}, "Not on source")))),
+      el("article", {}, el("h3", {}, "It knows when it doesn't know"), el("p", {}, "If key facts are missing, the agent researches further, up to three rounds. If they're still missing, it says so instead of guessing."),
+        el("div", {class: "mock"}, el("div", {class: "row"}, el("span", {}, "Web search: funding"), el("span", {class: "delta up"}, "+15")), el("div", {class: "row"}, el("span", {}, "Read /careers"), el("span", {class: "delta up"}, "+5")))),
+      el("article", {}, el("h3", {}, "Safe by default"), el("p", {}, "Emails never reach a prospect. Test sends go only to the owner's inbox, with daily caps, budget limits on every AI call, and contacts hidden until revealed."),
+        el("div", {class: "mock"}, el("div", {class: "row"}, el("span", {}, "Intended: a decision-maker"), el("span", {class: "pill"}, "Never emailed")), el("div", {class: "row"}, el("span", {}, "Delivered to: owner inbox"), pill("sent")))))));
+
+  const resultsBody = el("div", {class: "bars"});
+  const results = el("section", {class: "band", id: "results", style: "padding-top:0"}, el("div", {class: "wrap results"},
+    el("div", {}, el("div", {class: "eyebrow"}, "Results from real runs"), el("div", {class: "bigstat", style: "margin-top:14px"}, statNodes.q = el("span", {}, "–")),
+      el("h2", {style: "font-size:28px;font-weight:800;margin-top:8px"}, statNodes.label = el("span", {}, "qualified prospects")),
+      el("p", {class: "muted", style: "margin-top:12px;max-width:30em"}, "Most companies don't qualify, and that's the point. Existing Sprinto customers, competitors, late-stage giants and consumer brands are filtered out, each with a stated reason.")),
+    resultsBody));
+
+  const cta = el("section", {class: "band dark cta-band"}, el("div", {class: "wrap"},
+    el("h2", {}, "Your next qualified lead is one domain away."),
+    el("a", {class: "btn lime", href: "#app"}, "Open the workspace", icon("i-arrow"))));
+  const foot = el("footer", {class: "site"}, el("div", {class: "wrap"},
+    el("span", {}, "Sprinto Outbound · a MESA School of Business student build (Term 2, AI Case 2). Role-play outreach; no prospect is ever emailed."),
+    el("a", {href: "https://github.com/anshullmishra-png/sprinto-outbound", target: "_blank", rel: "noopener"}, "Source on GitHub")));
+
   api("/api/overview").then(o => {
-    const kpi = (n, label) => el("div", {class: "kpi"}, el("b", {}, String(n)), el("span", {}, label));
-    const recent = o.recent.length ? el("div", {class: "tablewrap"}, el("table", {},
-      el("thead", {}, el("tr", {}, ...["Company", "Outcome", "ICP fit", "Primary reason", "Researched", ""].map(h => el("th", {}, h)))),
-      el("tbody", {}, ...o.recent.map(r => el("tr", {},
-        el("td", {class: "co"}, el("b", {}, r.company || r.domain), el("span", {}, r.domain)),
-        el("td", {}, badge(r.status)),
-        el("td", {class: "num"}, r.score ?? "-"),
-        el("td", {class: "small"}, r.reason || "-"),
-        el("td", {class: "small muted"}, fmtDate(r.created)),
-        el("td", {}, el("a", {href: `#report/${encodeURIComponent(r.run_id)}/${encodeURIComponent(r.domain)}`}, "Report")))))))
-      : el("div", {class: "empty"}, "No research yet. Start a run to see prospects here.");
-    body.replaceChildren(
-      el("div", {class: "kpis"}, kpi(o.companies, "Companies researched"), kpi(o.qualified, "Qualified prospects"), kpi(o.review, "Need review"),
-        kpi(o.rejected, "Rejected"), kpi(o.failed, "Research failed"), kpi(o.drafted, "Emails drafted"), kpi(o.sent, "Test emails sent")),
-      el("div", {class: "grid-2"},
-        el("section", {class: "card"}, el("div", {class: "card-head"}, el("h2", {}, "Recent research activity"), el("a", {href: "#runs"}, "All runs")), recent),
-        el("section", {class: "card"},
-          el("h2", {}, "Start a research run"),
-          el("p", {class: "muted"}, "Paste company domains. Each one is read, scored against the ICP with cited evidence and, if it qualifies, matched to a decision-maker with a draft email."),
-          el("a", {class: "btn", href: "#new"}, "Analyze companies"),
-          el("h3", {style: "margin-top:18px"}, "Score bands"),
-          el("ul", {class: "ev"}, el("li", {}, "60 or more: qualified, contact is looked up"), el("li", {}, "40 to 59: the agent researches up to 3 more rounds"),
-            el("li", {}, "Below 40: rejected"), el("li", {}, "Key facts still unknown after research: needs a human")))));
-  }).catch(e => body.replaceChildren(errorBox(e.message, () => route())));
+    const best = o.recent.find(r => r.status === "qualified");
+    statNodes.q.textContent = ""; statNodes.q.append(`${o.qualified}`, el("span", {class: "muted", style: "font-size:.4em;font-weight:700"}, ` / ${o.companies}`));
+    statNodes.label.textContent = `qualified, out of ${o.companies} companies researched`;
+    const total = Math.max(o.companies, 1);
+    const rows = [["Qualified", o.qualified, "q"], ["Rejected", o.rejected, ""], ["Needs review", o.review, ""], ["Research failed", o.failed, ""]];
+    resultsBody.replaceChildren(...rows.map(([name, n, cls]) => { const bar = el("i"); requestAnimationFrame(() => setTimeout(() => bar.style.width = `${Math.round(n / total * 100)}%`, 60));
+      return el("div", {class: "barrow " + cls}, el("span", {}, name), el("div", {class: "track"}, bar), el("b", {class: "num"}, String(n))); }));
+    if (!best) { demo.replaceChildren(el("span", {class: "tag"}, "Example"), el("p", {class: "muted"}, "Run the workspace to see a live example here.")); return; }
+    const reportHref = `#app/report/${encodeURIComponent(best.run_id)}/${encodeURIComponent(best.domain)}`;
+    demo.replaceChildren(el("span", {class: "tag"}, "Real result · latest run"),
+      el("div", {class: "demo-top"}, el("div", {}, el("h3", {}, best.company || best.domain), el("p", {class: "muted small", style: "margin-top:4px"}, `${best.domain} · B2B SaaS`)), ring(best.score, "ICP fit")),
+      el("ul", {class: "checks"},
+        el("li", {}, el("span", {class: "k"}, "Company fit"), el("span", {class: "v"}, pill("qualified"))),
+        el("li", {}, el("span", {class: "k"}, "Why now"), el("span", {class: "v small", style: "max-width:240px;text-align:right"}, best.reason || "-")),
+        el("li", {}, el("span", {class: "k"}, "Buyer"), el("span", {class: "v"}, icon("i-check"), "Decision-maker found")),
+        el("li", {}, el("span", {class: "k"}, "Outreach"), el("span", {class: "v"}, icon("i-check"), best.sent ? "Draft ready · test sent" : best.drafted ? "Draft ready" : "Pending"))),
+      el("a", {class: "textlink", href: reportHref, style: "display:inline-block;margin-top:18px"}, "Read the full decision report →"));
+  }).catch(() => demo.replaceChildren(el("span", {class: "tag"}, "Example"), el("p", {class: "muted"}, "The live example couldn't load. The workspace still works.")));
+
+  return el("div", {}, top, el("main", {}, hero, compare, how, trust, results, cta), foot);
+}
+
+// ============================================================================================= workspace shell
+function appShell(active, content) {
+  const send = health && health.send_enabled;
+  const tab = (key, href, label) => el("a", {href, "aria-current": active === key ? "page" : null}, label);
+  return el("div", {},
+    el("header", {class: "topbar app"}, el("div", {class: "wrap"},
+      el("a", {class: "wordmark", href: "#/"}, el("i"), "SPRINTO OUTBOUND"),
+      el("nav", {class: "topnav appnav", "aria-label": "Workspace"}, tab("research", "#app", "Research"), tab("history", "#app/history", "History"),
+        tab("icp", "#app/icp", "ICP & scoring"), tab("system", "#app/system", "System")),
+      el("div", {class: "right"}, el("span", {class: "mode"}, el("span", {class: "dot" + (send ? " on" : "")}), send ? "Test emails go to the owner only" : "Dry run · no emails")))),
+    el("main", {class: "app-main"}, el("div", {class: "wrap"}, content)));
+}
+
+// ----- research home
+function parseDomain(raw) {
+  const d = raw.trim().toLowerCase().split("#")[0].trim().replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[\/?#\s]/)[0].replace(/[.,;]+$/, "");
+  return d ? {d, ok: /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)} : null;
+}
+function appHome() {
+  const page = el("div", {class: "stack"});
+  page.append(el("div", {class: "app-head"}, el("div", {class: "eyebrow"}, "Research"),
+    el("h1", {style: "margin-top:10px"}, "Which companies should we look into?"),
+    el("p", {}, "Paste domains. Each company is read, scored against Sprinto's ICP with cited evidence and, if it qualifies, matched to a buyer with a draft email.")));
+
+  if (!store.get("welcomed")) {
+    const w = el("div", {class: "welcome reveal"},
+      el("div", {}, el("h2", {}, "Welcome. Here's what happens when you press Research."),
+        el("ol", {}, el("li", {}, "We read each company's public website and quote everything we use."),
+          el("li", {}, "An ICP score decides fit. Missing facts trigger up to three extra research rounds."),
+          el("li", {}, "Only qualified companies get a buyer lookup and a draft email. Nothing is sent to prospects."))),
+      el("button", {class: "x", onclick: () => { store.set("welcomed", true); w.remove(); }}, "Got it"));
+    page.append(w);
+  }
+
+  // composer with domain chips
+  const chips = [];
+  const box = el("div", {class: "chipbox", onclick: () => input.focus()});
+  const input = el("input", {class: "chipinput", "aria-label": "Company domains", placeholder: "Type or paste domains, e.g. attio.com chargebee.com"});
+  const facts = el("div", {class: "facts", "aria-live": "polite"});
+  const goBtn = el("button", {class: "btn lime", disabled: true}, "Research companies");
+  const err = el("div");
+  const lim = (health && health.limits) || {domains_per_run: 10, runs_per_day: 5, llm_calls_per_domain: 12};
+  const usedToday = health && health.usage_today ? health.usage_today.domains_today : null;
+  const left = usedToday === null || usedToday === undefined ? null : Math.max(lim.runs_per_day - usedToday, 0);
+  function addRaw(text) {
+    for (const piece of text.split(/[\s,;]+/)) {
+      const p = parseDomain(piece); if (!p) continue;
+      if (chips.some(c => c.d === p.d)) { toast(`${p.d} is already in the list`); continue; }
+      chips.push(p);
+    }
+    draw();
+  }
+  function draw() {
+    box.replaceChildren(...chips.map((c, i) => el("span", {class: "dchip" + (c.ok ? "" : " bad"), title: c.ok ? c.d : "Not a valid domain"}, c.d,
+      el("button", {type: "button", "aria-label": `Remove ${c.d}`, onclick: e => { e.stopPropagation(); chips.splice(i, 1); draw(); input.focus(); }}, "×"))), input);
+    const good = chips.filter(c => c.ok).length, bad = chips.length - good;
+    const over = good > lim.domains_per_run || (left !== null && good > left);
+    facts.replaceChildren(
+      el("span", {}, el("b", {}, String(good)), ` compan${good === 1 ? "y" : "ies"} ready`),
+      bad ? el("span", {style: "color:var(--red)"}, `${bad} not a domain`) : null,
+      el("span", {}, left === null ? `Up to ${lim.runs_per_day} a day` : el("span", {}, el("b", {}, String(left)), ` of ${lim.runs_per_day} left today`)),
+      good ? el("span", {}, `≈${good}–${good * lim.llm_calls_per_domain} AI calls`) : null,
+      over ? el("span", {style: "color:var(--red)"}, good > lim.domains_per_run ? `Max ${lim.domains_per_run} per run` : "Over today's limit") : null);
+    goBtn.disabled = !good || bad > 0 || over;
+    goBtn.textContent = good ? `Research ${good} compan${good === 1 ? "y" : "ies"}` : "Research companies";
+  }
+  input.onkeydown = e => {
+    if ((e.key === "Enter" || e.key === "," || e.key === " ") && input.value.trim()) { e.preventDefault(); addRaw(input.value); input.value = ""; }
+    else if (e.key === "Backspace" && !input.value && chips.length) { chips.pop(); draw(); }
+    else if (e.key === "Enter" && !input.value && !goBtn.disabled) goBtn.click();
+  };
+  input.onpaste = e => { e.preventDefault(); addRaw((e.clipboardData || window.clipboardData).getData("text")); };
+  input.onblur = () => { if (input.value.trim()) { addRaw(input.value); input.value = ""; } };
+  goBtn.onclick = async () => {
+    const domains = chips.filter(c => c.ok).map(c => c.d);
+    goBtn.disabled = true; goBtn.textContent = "Starting…"; err.replaceChildren();
+    try {
+      const run = await api("/api/runs", {method: "POST", body: JSON.stringify({domains: domains.join("\n")})});
+      runs[run.run_id] = {domains: run.domains, artifacts: Object.fromEntries(run.domains.map(d => [d, {}])), briefs: {}, running: {}, current: run.domains[0], live: true};
+      toast(`Research started for ${run.domains.length} compan${run.domains.length === 1 ? "y" : "ies"}`);
+      location.hash = `#app/run/${encodeURIComponent(run.run_id)}`;
+      executeRun(run.run_id);
+    } catch (e) { err.replaceChildren(errBox(e.message)); draw(); }
+  };
+  const sample = el("button", {class: "btn ghost sm", onclick: async () => {
+    try { const t = await api("/api/sample-domains"); addRaw(t.split("\n").map(l => l.split("#")[0]).join(" ")); toast("Sample list loaded"); }
+    catch (e) { err.replaceChildren(errBox(e.message)); } }}, "Try the sample list");
+  draw();
+  const composer = el("section", {class: "panel composer reveal"}, box,
+    el("div", {class: "composer-foot"}, facts, el("div", {style: "display:flex;gap:10px;flex-wrap:wrap"}, sample, goBtn)), err);
+  page.append(composer);
+
+  // continue + recent
+  const last = store.get("lastReport");
+  const recent = el("section", {class: "panel"}, el("div", {style: "display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:6px"},
+    el("h2", {}, "Recent prospects"), el("a", {class: "textlink small", href: "#app/history"}, "All runs")), el("div", {class: "skeleton", style: "height:200px"}));
+  const side = el("div", {class: "stack"},
+    last ? el("a", {class: "continue reveal", href: `#app/report/${encodeURIComponent(last.runId)}/${encodeURIComponent(last.domain)}`},
+      el("span", {class: "eyebrow"}, "Continue where you left off"), el("b", {}, last.company || last.domain), el("span", {class: "muted small"}, "Open the decision report you were reading →")) : null,
+    el("section", {class: "panel"}, el("h2", {}, "How a company is judged"),
+      el("ul", {style: "margin:12px 0 0;padding-left:20px;display:grid;gap:6px;color:var(--ink-2)"},
+        el("li", {}, el("b", {}, "60+ "), "qualified: buyer lookup and draft email"), el("li", {}, el("b", {}, "40–59 "), "the agent researches up to 3 more rounds"),
+        el("li", {}, el("b", {}, "Below 40 "), "rejected, with the reason"), el("li", {}, el("b", {}, "Key facts unknown "), "needs a human, never guessed")),
+      el("a", {class: "textlink small", href: "#app/icp", style: "display:inline-block;margin-top:12px"}, "See all 20 criteria")));
+  page.append(el("div", {class: "twocol"}, recent, side));
+  api("/api/overview").then(o => {
+    recent.lastChild.replaceWith(o.recent.length ? el("div", {class: "plist"}, ...o.recent.slice(0, 8).map(r =>
+      el("a", {class: "prow", href: `#app/report/${encodeURIComponent(r.run_id)}/${encodeURIComponent(r.domain)}`},
+        el("div", {class: "co"}, el("b", {}, r.company || r.domain), el("span", {}, r.domain)), pill(r.status), el("div", {class: "why"}, r.reason || "-"), el("div", {class: "sc"}, r.score ?? "–"))))
+      : el("div", {class: "empty"}, "Nothing researched yet. Add a few domains above to start."));
+  }).catch(e => recent.lastChild.replaceWith(errBox(e.message, () => route())));
   return page;
 }
 
-// ===================================================================================================== New research run
-function parseDomains(text) {
-  const seen = new Set(), good = [], bad = [], dupes = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.split("#")[0].trim().toLowerCase();
-    if (!line) continue;
-    const d = line.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[\/?#\s]/)[0].replace(/\.$/, "");
-    if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) { bad.push(raw.trim()); continue; }
-    if (seen.has(d)) { dupes.push(d); continue; }
-    seen.add(d); good.push(d);
+// ----- run execution (one continuous research experience)
+async function runSteps(runId, domain, from) {
+  const r = runs[runId];
+  r.artifacts[domain] = r.artifacts[domain] || {};
+  for (let step = from; step <= 6; step++) {
+    r.current = domain; r.running[domain] = step; rerenderIf("run", runId); rerenderIf("report", runId);
+    let out;
+    try { out = await api(`/api/runs/${encodeURIComponent(runId)}/step`, {method: "POST", body: JSON.stringify({domain, step})}); }
+    catch (e) { out = {status: "error", message: e.message, artifact: {status: "error", reasoning: e.message}}; }
+    if (out.artifact) r.artifacts[domain][FILES[step]] = out.artifact;
+    if (out.brief) r.briefs[domain] = out.brief;
+    if (out.status === "error") r.briefs[domain] = Object.assign({}, r.briefs[domain], {status: "failed", failed_step: step, error: out.message});
+    delete r.running[domain];
+    if (out.status !== "done") break;
   }
-  return {good, bad, dupes};
-}
-function viewNew() {
-  const page = el("div", {class: "page"});
-  const lim = (health && health.limits) || {domains_per_run: 10, runs_per_day: 5, llm_calls_per_domain: 12, agent_rounds: 3};
-  const used = health && health.usage_today ? health.usage_today.domains_today : null;
-  const left = used === null || used === undefined ? null : Math.max(lim.runs_per_day - used, 0);
-  const sendOn = !!(health && health.send_enabled);
-  const ta = el("textarea", {id: "domains", spellcheck: "false", "aria-label": "Company domains, one per line", placeholder: "attio.com\nrocketlane.com\nchargebee.com"});
-  const val = el("div", {class: "validation", "aria-live": "polite"});
-  const goBtn = el("button", {class: "btn", disabled: true}, "Analyze companies");
-  const err = el("div");
-  const estimate = el("span", {class: "small"});
-  function update() {
-    const {good, bad, dupes} = parseDomains(ta.value);
-    const overRun = good.length > lim.domains_per_run, overDay = left !== null && good.length > left;
-    val.replaceChildren(
-      el("span", {class: good.length ? "good" : ""}, `${good.length} valid domain${good.length === 1 ? "" : "s"}`),
-      bad.length ? el("span", {class: "bad"}, `${bad.length} not a domain: ${bad.slice(0, 3).join(", ")}`) : null,
-      dupes.length ? el("span", {}, `${dupes.length} duplicate${dupes.length === 1 ? "" : "s"} ignored`) : null,
-      overRun ? el("span", {class: "bad"}, `max ${lim.domains_per_run} per run`) : null,
-      overDay ? el("span", {class: "bad"}, `only ${left} left today`) : null);
-    goBtn.disabled = !good.length || overRun || overDay;
-    goBtn.textContent = good.length ? `Analyze ${good.length} compan${good.length === 1 ? "y" : "ies"}` : "Analyze companies";
-    estimate.textContent = good.length ? `${good.length}–${good.length * lim.llm_calls_per_domain} AI calls; most rejections cost 1–3, repeats are free` : "Add domains to see an estimate";
-  }
-  ta.oninput = update;
-  goBtn.onclick = async () => {
-    const {good} = parseDomains(ta.value);
-    goBtn.disabled = true; err.replaceChildren();
-    try {
-      const run = await api("/api/runs", {method: "POST", body: JSON.stringify({domains: good.join("\n")})});
-      runs[run.run_id] = {domains: run.domains, artifacts: Object.fromEntries(run.domains.map(d => [d, {}])), briefs: {}, running: {}};
-      location.hash = `#run/${encodeURIComponent(run.run_id)}`;
-      executeRun(run.run_id).then(loadHealth);
-    } catch (e) { err.replaceChildren(errorBox(e.message)); goBtn.disabled = false; }
-  };
-  const cfg = (title, sub, state) => el("div", {class: "cfg-row"}, el("div", {}, el("b", {}, title), el("span", {}, sub)), state || el("span"));
-  const on = text => el("span", {class: "status s-done"}, icon("i-check"), text);
-  page.append(
-    el("div", {class: "page-head"}, el("div", {}, el("h1", {}, "New research run"), el("p", {}, "Identify companies that match Sprinto's ideal customer profile.")),
-      el("span", {class: "status s-dry_run"}, icon("i-dot"), "Dry run: analysis stops at a draft")),
-    el("div", {class: "banner info"}, icon("i-check"), el("div", {}, el("strong", {}, "No email ever reaches a prospect. "),
-      sendOn ? "After you review a draft in its report, you can send a test copy to the workspace owner's own inbox." : "Sending is switched off on this server.")),
-    el("div", {class: "grid-2"},
-      el("section", {class: "card"},
-        el("div", {class: "stepnum"}, "01 · ADD COMPANIES"), el("h2", {style: "margin:4px 0 10px"}, "Company domains, one per line"),
-        ta, val,
-        el("div", {style: "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"},
-          el("button", {class: "btn ghost sm", onclick: async () => { try { ta.value = await api("/api/sample-domains"); update(); } catch (e) { err.replaceChildren(errorBox(e.message)); } }}, "Load sample list"),
-          el("button", {class: "btn ghost sm", onclick: () => { ta.value = ""; update(); }}, "Clear all"))),
-      el("section", {class: "card"},
-        el("div", {class: "stepnum"}, "02 · RESEARCH CONFIGURATION"), el("h2", {style: "margin:4px 0 6px"}, "How each company is researched"),
-        el("div", {},
-          cfg("ICP framework", icpCache ? `Standard Sprinto ICP · ${icpCache.rules.length} criteria · qualifies at ${icpCache.settings.qualified_min_score}` : "Standard Sprinto ICP", on("Default")),
-          cfg("Agent research", `Up to ${lim.agent_rounds} extra rounds when evidence is missing`, on("Enabled")),
-          cfg("Contact discovery", `Hunter.io, qualified prospects only${quota && quota.hunter_searches_left !== null && quota.hunter_searches_left !== undefined ? ` · ${quota.hunter_searches_left} searches left` : ""}`, on("Enabled")),
-          cfg("Email delivery", "Owner inbox only, after review", el("span", {class: "status " + (sendOn ? "s-done" : "s-dry_run")}, sendOn ? "Test send" : "Off")),
-          cfg("Daily quota", left === null ? `${lim.runs_per_day} companies per day for everyone` : `${left} of ${lim.runs_per_day} companies left today`),
-          cfg("Estimated usage", "", estimate)),
-        el("div", {style: "margin-top:14px"}, goBtn), err)));
-  update();
-  return page;
+  rerenderIf("run", runId); rerenderIf("report", runId);
 }
 async function executeRun(runId) {
-  const r = runs[runId];
-  for (const domain of r.domains) {
-    for (let step = 1; step <= 6; step++) {
-      r.running[domain] = step; rerenderIf("run", runId); rerenderIf("report", runId);
-      let out;
-      try { out = await api(`/api/runs/${encodeURIComponent(runId)}/step`, {method: "POST", body: JSON.stringify({domain, step})}); }
-      catch (e) { out = {status: "error", message: e.message, artifact: {status: "error", reasoning: e.message}}; }
-      r.artifacts[domain] = r.artifacts[domain] || {};
-      if (out.artifact) r.artifacts[domain][FILES[step]] = out.artifact;
-      if (out.brief) r.briefs[domain] = out.brief;
-      if (out.status === "error" && !out.brief) r.briefs[domain] = Object.assign({}, r.briefs[domain], {status: "failed", why_now: [out.message]});
-      delete r.running[domain]; rerenderIf("run", runId); rerenderIf("report", runId);
-      if (out.status !== "done") break;
-    }
-  }
+  const r = runs[runId]; r.live = true;
+  for (const d of r.domains) await runSteps(runId, d, 1);
+  r.current = null; r.finished = true;
+  const q = r.domains.filter(d => (r.briefs[d] || {}).status === "qualified").length;
+  toast(`Research complete: ${q} qualified of ${r.domains.length}`);
+  loadHealth(); rerenderIf("run", runId);
 }
 
-// ===================================================================================================== Past runs
-function viewRuns() {
-  const page = el("div", {class: "page"});
-  page.append(el("div", {class: "page-head"}, el("div", {}, el("h1", {}, "Past runs"), el("p", {}, "Every run is saved with its evidence. Open one to review prospects and decision reports.")),
-    el("a", {class: "btn", href: "#new"}, icon("i-plus"), "New research run")));
-  const body = el("div", {}, loading("Loading runs…"));
-  page.append(body);
-  api("/api/runs").then(list => {
-    const search = el("input", {type: "search", placeholder: "Search by domain", value: pastFilter.q, "aria-label": "Search runs by domain"});
-    const sortSel = el("select", {"aria-label": "Sort runs"}, el("option", {value: "new"}, "Newest first"), el("option", {value: "old"}, "Oldest first"), el("option", {value: "qualified"}, "Most qualified"));
-    sortSel.value = pastFilter.sort;
-    const chips = el("div", {class: "chips"}), holder = el("div");
-    const draw = () => {
-      chips.replaceChildren(...[["all", "All"], ["qualified", "With qualified"], ["review", "Needs review"], ["failed", "With failures"]].map(([k, t]) =>
-        el("button", {class: "chip", "aria-pressed": String(pastFilter.outcome === k), onclick: () => { pastFilter.outcome = k; draw(); }}, t)));
-      let rows = list.filter(r => !pastFilter.q || r.names.some(n => n.includes(pastFilter.q.toLowerCase())));
-      if (pastFilter.outcome !== "all") rows = rows.filter(r => r[pastFilter.outcome] > 0);
-      rows.sort((a, b) => pastFilter.sort === "old" ? a.created.localeCompare(b.created) : pastFilter.sort === "qualified" ? b.qualified - a.qualified : b.created.localeCompare(a.created));
-      holder.replaceChildren(rows.length ? el("div", {class: "tablewrap"}, el("table", {},
-        el("thead", {}, el("tr", {}, ...["Started", "Run ID", "Companies", "Qualified", "Needs review", "Rejected", "Failed", ""].map(h => el("th", {}, h)))),
-        el("tbody", {}, ...rows.map(r => el("tr", {},
-          el("td", {}, fmtDate(r.created)), el("td", {}, el("code", {}, r.run_id)),
-          el("td", {class: "small"}, r.names.slice(0, 4).join(", ") + (r.names.length > 4 ? ` +${r.names.length - 4}` : "")),
-          el("td", {class: "num"}, r.qualified), el("td", {class: "num"}, r.review), el("td", {class: "num"}, r.rejected), el("td", {class: "num"}, r.failed),
-          el("td", {}, el("a", {href: `#run/${encodeURIComponent(r.run_id)}`}, "Open"))))))) : el("div", {class: "empty"}, "No runs match these filters."));
-    };
-    search.oninput = () => { pastFilter.q = search.value.trim(); draw(); };
-    sortSel.onchange = () => { pastFilter.sort = sortSel.value; draw(); };
-    body.replaceChildren(el("section", {class: "card"},
-      el("div", {class: "card-head"}, el("div", {style: "flex:1;min-width:200px;max-width:340px"}, search), chips, el("div", {style: "width:170px"}, sortSel)),
-      holder));
-    draw();
-  }).catch(e => body.replaceChildren(errorBox(e.message, () => route())));
-  return page;
+// ----- run page
+function phaseOf(arts, running) {
+  return PHASES.map(([name, steps]) => {
+    if (steps.includes(running)) return [name, "active"];
+    const sts = steps.map(n => (arts[FILES[n]] || {}).status).filter(Boolean);
+    return [name, sts.length === steps.length && sts.every(s => s === "done") ? "done" : sts.length ? "partial" : ""];
+  });
 }
-
-// ===================================================================================================== One run: prospect table
-function phaseState(arts, running, steps) {
-  if (steps.includes(running)) return "running";
-  const sts = steps.map(n => (arts[FILES[n]] || {}).status).filter(Boolean);
-  if (!sts.length) return "";
-  if (sts.includes("error")) return "error";
-  if (sts.includes("stopped")) return "stopped";
-  return sts.length === steps.length ? "done" : "running";
-}
-function phaseBar(arts, running) {
-  return el("div", {class: "phases"}, ...PHASES.map(([name, steps]) => {
-    const st = phaseState(arts, running, steps);
-    return el("span", {class: "phase " + st, title: `${name}: ${steps.map(n => STEPS[n]).join(" · ")}${st ? " (" + st + ")" : ""}`}, name);
-  }));
-}
-function outreachCell(arts) {
-  const mail = (arts["06_email"] || {}).output, sent = (arts["07_send"] || {}).output;
-  if (sent && sent.status === "sent") return el("span", {class: "status s-sent"}, icon("i-check"), "Test sent");
-  if (mail) return mail.flagged ? el("span", {class: "status s-review"}, icon("i-alert"), "Draft flagged") : el("span", {class: "status s-done"}, icon("i-check"), "Draft ready");
-  return el("span", {class: "muted"}, "-");
-}
-function viewRun(runId) {
-  const page = el("div", {class: "page"});
-  const body = el("div", {class: "page"}, loading("Loading run…"));
-  page.append(body);
+function runPage(runId) {
+  const page = el("div", {class: "stack"}, el("div", {class: "skeleton"}));
   getRun(runId).then(r => {
     const statusOf = d => r.running[d] ? "running" : ((r.briefs[d] || {}).status || "pending");
     const count = s => r.domains.filter(d => statusOf(d) === s).length;
-    const busy = Object.keys(r.running).length > 0 || r.domains.some(d => statusOf(d) === "pending" && runs[runId] && Object.keys(r.artifacts[d] || {}).length === 0);
-    const chips = el("div", {class: "chips"}, ...[["all", `All · ${r.domains.length}`], ["qualified", `Qualified · ${count("qualified")}`], ["review", `Needs review · ${count("review")}`],
-      ["rejected", `Rejected · ${count("rejected")}`], ["failed", `Research failed · ${count("failed")}`]].map(([k, t]) =>
-      el("button", {class: "chip", "aria-pressed": String(runFilter === k), onclick: () => { runFilter = k; route(); }}, t)));
-    const rows = r.domains.filter(d => runFilter === "all" || statusOf(d) === runFilter).map(d => {
-      const arts = r.artifacts[d] || {}, b = r.briefs[d] || {}, running = r.running[d];
+    const busy = r.live && !r.finished;
+    const parts = [el("div", {class: "app-head"}, el("div", {class: "eyebrow"}, `Run ${runId} · ${fmtDate(runDate(runId))}`),
+      el("h1", {style: "margin-top:10px"}, busy ? "Researching your list" : "Prospect intelligence"),
+      el("p", {}, busy ? "You can open any finished company while the rest are being researched." : `${r.domains.length} compan${r.domains.length === 1 ? "y" : "ies"} researched. Open a report to see why each decision was made.`))];
+
+    if (busy && r.current) {
+      const d = r.current, step = r.running[d], arts = r.artifacts[d] || {};
+      parts.push(el("section", {class: "now", "aria-live": "polite"},
+        el("div", {class: "eyebrow", style: "color:#A9B4C6"}, `Company ${r.domains.indexOf(d) + 1} of ${r.domains.length}`),
+        el("h2", {}, d, step ? el("span", {style: "font-weight:600;color:#C9D1DE"}, ` · ${STEPS[step]}`) : null),
+        el("p", {class: "doing"}, step ? DOING[step] : "Moving to the next company…"),
+        el("div", {class: "rail"}, ...phaseOf(arts, step).map(([name, st]) => el("div", {class: st}, el("i"), name))),
+        el("div", {class: "queue"}, ...r.domains.map(x => el("span", {class: x === d ? "cur" : r.briefs[x] ? "done" : ""}, x)))));
+    } else if (r.finished) {
+      const q = count("qualified");
+      const best = r.domains.find(d => statusOf(d) === "qualified");
+      parts.push(el("section", {class: "summary"},
+        el("h2", {}, q ? `${q} compan${q === 1 ? "y is" : "ies are"} worth pursuing.` : "No company qualified this time, and each has a reason."),
+        el("div", {class: "nums"}, ...[["qualified", "Qualified"], ["review", "Needs review"], ["rejected", "Rejected"], ["failed", "Research failed"]].map(([k, t]) => el("div", {}, el("b", {}, String(count(k))), el("span", {}, t)))),
+        best ? el("div", {}, el("a", {class: "btn", href: `#app/report/${encodeURIComponent(runId)}/${encodeURIComponent(best)}`}, `Open ${(r.briefs[best] || {}).company || best}'s report`, icon("i-arrow")))
+          : el("div", {}, el("a", {class: "btn", href: "#app"}, "Research another list", icon("i-arrow")))));
+    }
+
+    const filters = el("div", {class: "filters"}, ...[["all", `All ${r.domains.length}`], ["qualified", `Qualified ${count("qualified")}`], ["review", `Needs review ${count("review")}`],
+      ["rejected", `Rejected ${count("rejected")}`], ["failed", `Failed ${count("failed")}`]].map(([k, t]) =>
+      el("button", {class: "fchip", "aria-pressed": String(ui.runFilter === k), onclick: () => { ui.runFilter = k; route(); }}, t)));
+    const rows = r.domains.filter(d => ui.runFilter === "all" || statusOf(d) === ui.runFilter).map(d => {
+      const b = r.briefs[d] || {}, arts = r.artifacts[d] || {}, st = statusOf(d);
       const q = (arts["03_qualify"] || {}).output || {};
-      const reason = b.disqualifier ? `Disqualified: ${b.disqualifier.replace(/^DQ_/, "").replace(/_/g, " ").toLowerCase()}`
-        : (b.why_now || [])[0] || (q.reasoning || "").slice(0, 120) || (running ? "" : ((arts["01_scrape"] || {}).reasoning || "").slice(0, 120));
-      const hasReport = Object.keys(arts).length > 0;
-      return el("tr", {},
-        el("td", {class: "co"}, el("b", {}, b.company || d), el("span", {}, d)),
-        el("td", {}, badge(statusOf(d)), q.score !== undefined ? el("div", {class: "num small", style: "margin-top:4px"}, `${q.score}/100`) : null),
-        el("td", {}, phaseBar(arts, running), running ? el("div", {class: "activity"}, icon("i-spin"), ` ${STEPS[running]}…`) : null),
-        el("td", {class: "small"}, reason || "-"),
-        el("td", {}, b.contact ? el("div", {}, secret(`${b.contact.name}, ${b.contact.title}`), el("div", {class: "small muted"}, b.contact.relevance)) : el("span", {class: "muted small"}, "-")),
-        el("td", {class: "num"}, b.sources ? `${b.sources} source${b.sources === 1 ? "" : "s"}` : "-"),
-        el("td", {}, outreachCell(arts)),
-        el("td", {}, hasReport ? el("a", {class: "btn ghost sm", href: `#report/${encodeURIComponent(runId)}/${encodeURIComponent(d)}`}, "View report") : null));
+      const reason = st === "running" ? STEPS[r.running[d]] + "…" : st === "pending" ? "Waiting in the queue"
+        : st === "failed" ? `Stopped at "${STEPS[b.failed_step] || "a step"}": ${(b.error || ((arts["01_scrape"] || {}).reasoning) || "").slice(0, 140)}`
+        : b.disqualifier ? `Disqualified: ${b.disqualifier.replace(/^DQ_/, "").replace(/_/g, " ").toLowerCase()}` : (b.why_now || [])[0] || (q.reasoning || "").slice(0, 140);
+      const row = el("div", {class: "prow", style: "cursor:default"},
+        el("div", {class: "co"}, el("b", {}, b.company || d), el("span", {}, d)), pill(st),
+        el("div", {class: "why"}, reason || "-",
+          b.contact ? el("div", {class: "small muted", style: "margin-top:4px"}, "Buyer: ", secret(`${b.contact.name}, ${b.contact.title}`)) : null,
+          st === "failed" ? el("div", {class: "retry"}, el("button", {class: "btn ghost sm", onclick: () => {
+            const from = b.failed_step || 1; r.live = true; r.finished = false; runSteps(runId, d, from).then(() => { r.finished = true; rerenderIf("run", runId); }); }}, "Retry this company")) : null),
+        el("div", {style: "display:grid;gap:6px;justify-items:end"}, el("div", {class: "sc"}, q.score ?? "–"),
+          Object.keys(arts).length ? el("a", {class: "textlink small", href: `#app/report/${encodeURIComponent(runId)}/${encodeURIComponent(d)}`}, "Report →") : null));
+      return row;
     });
-    body.replaceChildren(
-      el("div", {class: "page-head"},
-        el("div", {}, el("h1", {}, "Prospect intelligence"), el("p", {}, "Run ", el("code", {}, runId), ` · started ${fmtDate(runDate(runId))}`,
-          icpCache ? ` · ICP: ${icpCache.rules.length} criteria, qualifies at ${icpCache.settings.qualified_min_score}` : "")),
-        el("div", {style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center"},
-          Object.keys(r.running).length ? el("span", {class: "status s-running"}, icon("i-spin"), "Research in progress") : null,
-          el("a", {class: "btn ghost", href: `/api/runs/${encodeURIComponent(runId)}/report`, target: "_blank", rel: "noopener"}, "Full report (Markdown)"))),
-      el("section", {class: "card"}, el("div", {class: "card-head"}, chips),
-        rows.length ? el("div", {class: "tablewrap"}, el("table", {},
-          el("thead", {}, el("tr", {}, ...["Company", "ICP fit", "Progress", "Reason", "Decision-maker", "Evidence", "Outreach", ""].map(h => el("th", {}, h)))),
-          el("tbody", {}, ...rows))) : el("div", {class: "empty"}, "No companies with this status in this run.")));
-  }).catch(e => body.replaceChildren(errorBox(e.message, () => route())));
+    parts.push(el("section", {class: "panel"}, el("div", {style: "display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:8px"}, filters,
+      el("a", {class: "textlink small", href: `/api/runs/${encodeURIComponent(runId)}/report`, target: "_blank", rel: "noopener"}, "Download full report (Markdown)")),
+      rows.length ? el("div", {class: "plist"}, ...rows) : el("div", {class: "empty"}, "No companies with this status.")));
+    page.replaceChildren(...parts);
+  }).catch(e => page.replaceChildren(errBox(e.message, () => route())));
   return page;
 }
 
-// ===================================================================================================== Decision report
-function section(n, title, ...content) {
-  return el("section", {class: "card"}, el("div", {class: "sec-title"}, el("span", {class: "n"}, String(n).padStart(2, "0")), el("h2", {}, title)), ...content);
+// ----- decision report
+function evItem(e) {
+  const href = safeUrl(e.source_url);
+  return el(href ? "a" : "div", {class: "ev", href, target: href ? "_blank" : null, rel: href ? "noopener noreferrer" : null, tabindex: href ? null : "0"},
+    el("div", {class: "c"}, e.claim), el("div", {class: "s"}, host(e.source_url), " · hover to see the quote"),
+    el("span", {class: "tip", role: "tooltip"}, `“${e.quote}”`, el("em", {}, `Found on ${host(e.source_url)}${pathOf(e.source_url) !== "/" ? pathOf(e.source_url) : ""}`)));
 }
-function evidenceList(evs, limit = 6) {
-  if (!evs || !evs.length) return null;
-  return el("ul", {class: "ev"}, ...evs.slice(0, limit).map(e => el("li", {}, e.claim, " ", el("q", {}, e.quote), " · ", link(e.source_url, host(e.source_url)))));
+const evList = (evs, n = 6) => evs && evs.length ? el("ul", {class: "evlist"}, ...evs.slice(0, n).map(e => el("li", {}, evItem(e)))) : null;
+function chapter(n, title, note, ...body) {
+  return el("section", {class: "chapter reveal", style: `animation-delay:${n * 70}ms`},
+    el("header", {}, el("div", {class: "n"}, String(n).padStart(2, "0")), el("h2", {}, title), note ? el("p", {}, note) : null), el("div", {class: "stack", style: "gap:18px"}, ...body));
 }
-function trace(arts, steps) {
+function traceOf(arts, steps) {
   const items = steps.filter(n => arts[FILES[n]]).map(n => {
     const a = arts[FILES[n]], prev = n > 1 ? arts[FILES[n - 1]] : null;
-    const secs = a.timestamp && prev && prev.timestamp ? Math.max(0, Math.round((new Date(a.timestamp) - new Date(prev.timestamp)) / 1000)) : null;
-    return el("div", {}, el("strong", {}, `${n}. ${STEPS[n]} `), badge(a.status),
-      el("div", {class: "muted"}, [a.model ? `Model ${a.model}` : null, `AI calls so far ${a.llm_calls_used ?? 0}`, secs !== null && secs < 3600 ? `took ≈${secs}s` : null, a.timestamp ? fmtDate(a.timestamp) : null].filter(Boolean).join(" · ")),
-      a.input_summary ? el("div", {}, el("strong", {}, "Input: "), a.input_summary) : null,
-      a.reasoning ? el("div", {}, el("strong", {}, "What was accepted: "), a.reasoning) : null);
+    const secs = a.timestamp && prev && prev.timestamp ? Math.round((new Date(a.timestamp) - new Date(prev.timestamp)) / 1000) : null;
+    return el("div", {}, el("b", {}, `${STEPS[n]} `), pill(a.status),
+      el("div", {class: "muted small"}, [a.model, `${a.llm_calls_used ?? 0} AI calls so far`, secs !== null && secs >= 0 && secs < 3600 ? `≈${secs}s` : null].filter(Boolean).join(" · ")),
+      a.reasoning ? el("div", {}, a.reasoning) : null);
   });
   return items.length ? el("details", {class: "trace"}, el("summary", {}, "Technical trace"), el("div", {class: "trace-body"}, ...items)) : null;
 }
-function viewReport(runId, domain) {
-  const page = el("div", {class: "page"});
-  const body = el("div", {class: "page", style: "gap:16px"}, loading("Loading decision report…"));
-  page.append(el("div", {}, el("a", {href: `#run/${encodeURIComponent(runId)}`}, "← Back to run")), body);
-  Promise.all([getRun(runId), icpReady()]).then(([r, icp]) => {
+function reportPage(runId, domain) {
+  const page = el("div", {class: "stack", style: "gap:32px"}, el("div", {class: "skeleton", style: "height:260px"}));
+  Promise.all([getRun(runId), icpReady()]).then(([r, icpData]) => {
     const arts = r.artifacts[domain] || {}, b = r.briefs[domain] || {};
     const scrape = (arts["01_scrape"] || {}).output || {}, prof = (arts["02_extract"] || {}).output || {};
     const q = (arts["03_qualify"] || {}).output || {}, poc = (arts["04_poc"] || {}).output || {};
     const pains = (arts["05_pain"] || {}).output || [], mail = (arts["06_email"] || {}).output, sent = (arts["07_send"] || {}).output;
     const status = r.running[domain] ? "running" : (b.status || "pending");
+    const company = b.company || prof.name || domain;
+    store.set("lastReport", {runId, domain, company});
 
-    const head = el("section", {class: "card"}, el("div", {class: "dossier-head"},
-      el("div", {style: "min-width:0;flex:1"}, el("div", {style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"}, el("h1", {}, b.company || prof.name || domain), badge(status)),
-        el("p", {class: "muted", style: "margin:4px 0 0"}, `${domain} · Research report · ${fmtDate((arts["03_qualify"] || arts["01_scrape"] || {}).timestamp)} · run ${runId}`),
-        b.description || prof.description ? el("p", {style: "margin:8px 0 0;max-width:72ch"}, b.description || prof.description) : null),
-      q.score !== undefined ? el("div", {class: "score"}, el("b", {}, String(q.score)), el("span", {}, `ICP fit · qualifies at ${icp.settings.qualified_min_score}`)) : null),
-      (b.uncertain || []).length ? el("div", {class: "banner warn", style: "margin-top:14px"}, icon("i-alert"), el("div", {}, el("strong", {}, "Still uncertain"),
-        el("ul", {class: "ev"}, ...b.uncertain.map(u => el("li", {}, u))))) : null);
+    const verdictLine = status === "running" ? `Researching now: ${STEPS[r.running[domain]]}.`
+      : q.disqualifier ? `Rejected before scoring: ${q.disqualifier.replace(/^DQ_/, "").replace(/_/g, " ").toLowerCase()}.`
+      : (q.reasoning || "").replace(/^(QUALIFIED|REJECTED|INSUFFICIENT_DATA):\s*/, "").split(". ").slice(0, 2).join(". ");
+    const c = b.contact;
+    const parts = [
+      el("div", {}, el("a", {class: "textlink small", href: `#app/run/${encodeURIComponent(runId)}`}, "← Back to the run")),
+      el("section", {class: "rep-hero reveal"},
+        el("div", {}, el("div", {style: "display:flex;gap:12px;align-items:center;flex-wrap:wrap"}, el("span", {class: "eyebrow"}, "Decision report"), pill(status)),
+          el("h1", {style: "margin-top:14px"}, company),
+          el("div", {class: "meta"}, `${domain} · researched ${fmtDate((arts["03_qualify"] || arts["01_scrape"] || {}).timestamp)} · run ${runId}`),
+          verdictLine ? el("p", {class: "verdict"}, verdictLine) : null),
+        q.score !== undefined ? ring(q.score, `of 100 · needs ${icpData.settings.qualified_min_score}`, true) : null),
+      el("div", {class: "keyfacts reveal"},
+        el("div", {}, el("div", {class: "k"}, "Verdict"), el("div", {class: "v"}, LABEL[status] || status)),
+        el("div", {}, el("div", {class: "k"}, "Buyer"), el("div", {class: "v"}, c ? c.title || "Found" : "–")),
+        el("div", {}, el("div", {class: "k"}, "Evidence"), el("div", {class: "v"}, b.sources ? `${b.sources} sources` : "–")),
+        el("div", {}, el("div", {class: "k"}, "Outreach"), el("div", {class: "v"}, sent && sent.status === "sent" ? "Test sent" : mail ? (mail.flagged ? "Draft flagged" : "Draft ready") : "–")))];
+    if ((b.uncertain || []).length) parts.push(el("aside", {class: "uncertain reveal"}, el("h3", {}, "What's still uncertain"), el("ul", {}, ...b.uncertain.map(u => el("li", {}, u)))));
 
-    // 01 Company overview
+    // 01 Company
     const kv = el("dl", {class: "kv"});
     const add = (k, v) => { if (v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length)) kv.append(el("dt", {}, k), el("dd", {}, Array.isArray(v) ? v.join(", ") : String(v))); };
-    add("What they sell", prof.product_category); add("Customers", prof.target_customers);
+    add("What they do", prof.description); add("Category", prof.product_category); add("Who buys it", prof.target_customers);
     add("Sells to enterprise", prof.sells_to_enterprise === true ? "Yes" : prof.sells_to_enterprise === false ? "No" : null);
-    add("Pricing", prof.pricing_model); add("Size", prof.employee_range); add("Funding", prof.funding_stage); add("HQ", prof.hq_location); add("Markets", prof.markets);
-    add("Certifications seen", prof.certifications_mentioned); add("Not stated on the site", prof.unknowns);
-    const s1 = section(1, "Company overview", kv.childElementCount ? kv : el("p", {class: "muted"}, r.running[domain] ? "Research in progress…" : "No profile was extracted."),
-      evidenceList(prof.evidence, 5), trace(arts, [1, 2]));
+    add("Pricing", prof.pricing_model); add("Size", prof.employee_range); add("Funding", prof.funding_stage); add("Headquarters", prof.hq_location);
+    add("Markets", prof.markets); add("Certifications claimed", prof.certifications_mentioned);
+    parts.push(chapter(1, "The company", "What their own website says, with a source for every fact.",
+      kv.childElementCount ? kv : el("p", {class: "muted"}, status === "running" ? "Being researched…" : "No profile could be extracted."),
+      prof.unknowns && prof.unknowns.length ? el("p", {class: "small muted"}, "Not stated on the site: " + prof.unknowns.join(", ").replace(/_/g, " ")) : null,
+      evList(prof.evidence, 4), traceOf(arts, [1, 2])));
 
-    // 02 Qualification assessment
-    let s2;
+    // 02 Fit
     if (q.verdict) {
       const lines = q.score_breakdown || [];
       const sigBy = Object.fromEntries((q.signals || []).map(s => [s.rule_id, s]));
-      const rubric = (icp.rows || []).map(row => {
+      const rubric = (icpData.rows || []).map(row => {
         const pts = lines.filter(l => l.rubric_row === row.name).reduce((a, l) => a + l.points, 0);
-        const vals = (icp.rules || []).filter(x => x.row === row.id).map(x => (sigBy[x.id] || {}).value || "unknown");
-        const state = row.id === "COMP" ? (pts < 0 ? ["Penalty applied", "s-review", "i-alert"] : ["No competitor seen", "s-done", "i-check"])
-          : pts > 0 ? ["Evidence found", "s-done", "i-check"] : vals.every(v => v === "unknown") ? ["Needs verification", "s-review", "i-alert"] : ["Not met", "s-rejected", "i-x"];
-        const pct = row.max_points ? Math.max(0, Math.min(100, Math.round(Math.abs(pts) / row.max_points * 100))) : 0;
-        return el("div", {class: "rubric"},
-          el("div", {}, el("div", {}, row.name, row.critical ? el("span", {class: "muted small"}, " · critical") : null), el("div", {class: "bar", style: "margin-top:6px"}, el("i", {style: `width:${pct}%`}))),
-          el("div", {class: "num"}, row.id === "COMP" ? `${pts}` : `${pts} / ${row.max_points}`),
-          el("span", {class: "status " + state[1]}, icon(state[2]), state[0]));
+        const vals = (icpData.rules || []).filter(x => x.row === row.id).map(x => (sigBy[x.id] || {}).value || "unknown");
+        const [label, cls] = row.id === "COMP" ? (pts < 0 ? ["Penalty applied", "review"] : ["No competitor seen", "done"])
+          : pts > 0 ? ["Evidence found", "done"] : vals.every(v => v === "unknown") ? ["Needs verification", "review"] : ["Not met", ""];
+        const bar = el("i"); const pct = row.max_points ? Math.min(100, Math.round(Math.abs(pts) / row.max_points * 100)) : 0;
+        requestAnimationFrame(() => setTimeout(() => (bar.style.width = pct + "%"), 120));
+        return el("div", {class: "rub"}, el("div", {}, el("div", {class: "name"}, row.name, row.critical ? el("small", {}, " · critical") : null), el("div", {class: "bar"}, bar)),
+          el("div", {class: "pts"}, row.id === "COMP" ? String(pts) : `${pts}/${row.max_points}`), el("span", {class: "pill " + cls}, label));
       });
-      const verdict = q.disqualifier
-        ? el("div", {class: "banner err"}, icon("i-x"), el("div", {}, el("strong", {}, "Hard disqualifier: "), q.disqualifier.replace(/^DQ_/, "").replace(/_/g, " ").toLowerCase(), ". ", q.reasoning))
-        : el("p", {style: "margin-top:0"}, q.reasoning);
-      const detail = el("details", {class: "trace"}, el("summary", {}, `Rule-by-rule scoring (${lines.length} rules)`), el("div", {class: "tablewrap", style: "margin-top:8px"}, el("table", {},
+      const ruleTable = el("details", {class: "trace"}, el("summary", {}, `Rule by rule (${lines.length})`), el("div", {class: "tablewrap", style: "margin-top:10px"}, el("table", {},
         el("thead", {}, el("tr", {}, ...["Rule", "Answer", "Points", "Why"].map(h => el("th", {}, h)))),
-        el("tbody", {}, ...lines.map(l => el("tr", {}, el("td", {}, el("code", {}, l.rule_id)), el("td", {}, (sigBy[l.rule_id] || {}).value || "-"),
+        el("tbody", {}, ...lines.map(l => el("tr", {}, el("td", {}, el("code", {}, l.rule_id)), el("td", {}, (sigBy[l.rule_id] || {}).value || "–"),
           el("td", {class: "num"}, `${l.points}/${l.max_points}`), el("td", {class: "small"}, l.reason)))))));
-      s2 = section(2, "Qualification assessment", verdict, el("div", {class: "rows"}, ...rubric),
-        el("h3", {style: "margin-top:14px"}, "Verified evidence (every quote was found on its source)"), evidenceList(q.evidence, 10) || el("p", {class: "muted"}, "No evidence recorded."), detail);
+      parts.push(chapter(2, "Why they fit, or don't", "The model answered each question with a quote. Python checked every quote and applied the points.",
+        q.disqualifier ? el("div", {class: "banner err"}, el("strong", {}, "Hard disqualifier"), el("span", {}, q.reasoning)) : null,
+        el("div", {}, ...rubric), el("div", {}, el("div", {class: "eyebrow", style: "margin-bottom:10px"}, "Verified evidence"), evList(q.evidence, 8) || el("p", {class: "muted"}, "No evidence recorded.")),
+        ruleTable));
     } else {
-      s2 = section(2, "Qualification assessment", el("p", {class: "muted"}, r.running[domain] ? "Research in progress…" : "Not assessed: " + (((arts["01_scrape"] || {}).reasoning) || "the site could not be read.")));
+      parts.push(chapter(2, "Why they fit, or don't", null, el("p", {class: "muted"}, status === "running" ? "Scoring in progress…" : "Not scored: " + (((arts["01_scrape"] || {}).reasoning) || "the site could not be read."))));
     }
 
     // 03 Research trail
     const pages = scrape.pages || [];
-    const okPages = pages.filter(p => !p.error && (p.quality || "ok") === "ok");
-    const trailItems = [
-      el("li", {}, el("span", {class: "tdot"}, "1"), el("div", {}, el("strong", {}, "Website scan"),
-        el("div", {class: "small"}, `${okPages.length} readable of ${pages.length} pages: `, ...pages.slice(0, 8).flatMap((p, i) => [i ? " → " : "", link(p.url, pathOf(p.url))])),
-        pages.filter(p => p.error || (p.quality && p.quality !== "ok")).length ? el("div", {class: "small muted"}, "Could not read: ",
-          pages.filter(p => p.error || (p.quality && p.quality !== "ok")).map(p => `${pathOf(p.url)} (${p.error || p.quality_note || p.quality})`).join("; ")) : null)),
-      ...(q.iterations || []).map((it, i) => el("li", {}, el("span", {class: "tdot"}, String(i + 2)), el("div", {},
-        el("strong", {}, it.action.action === "web_search" ? `Web search: "${it.action.argument}"` : it.action.action === "fetch_page" ? `Read page: ${pathOf(it.action.argument)}` : "Stopped researching"),
-        el("div", {class: "small muted"}, it.action.why), el("div", {class: "small"}, it.learned),
-        el("div", {class: "small", style: "margin-top:2px"}, `Score ${it.score_before} → ${it.score_after} `,
-          it.score_after > it.score_before ? el("span", {class: "status s-done"}, `+${it.score_after - it.score_before}`)
-            : it.score_after < it.score_before ? el("span", {class: "status s-rejected"}, String(it.score_after - it.score_before)) : el("span", {class: "muted"}, "(no change)")))))];
-    const s3 = section(3, "Research trail", el("ol", {class: "trail"}, ...trailItems), trace(arts, [3]));
+    const unreadable = pages.filter(p => p.error || (p.quality && p.quality !== "ok"));
+    const trail = [el("li", {}, el("span", {class: "tn"}, "1"), el("div", {}, el("h3", {}, `Read ${pages.length - unreadable.length} of ${pages.length} pages`),
+      el("p", {}, pages.map(p => pathOf(p.url)).slice(0, 8).join(" → ")),
+      unreadable.length ? el("p", {class: "small muted"}, "Couldn't read: " + unreadable.map(p => `${pathOf(p.url)} (${p.error || p.quality_note || p.quality})`).join("; ")) : null))];
+    (q.iterations || []).forEach((it, i) => {
+      const dlt = it.score_after - it.score_before;
+      trail.push(el("li", {}, el("span", {class: "tn" + (dlt > 0 ? " up" : "")}, String(i + 2)), el("div", {},
+        el("h3", {}, it.action.action === "web_search" ? `Searched the web: “${it.action.argument}”` : it.action.action === "fetch_page" ? `Read ${pathOf(it.action.argument)}` : "Stopped researching",
+          el("span", {class: "delta" + (dlt > 0 ? " up" : "")}, dlt > 0 ? `+${dlt}` : dlt < 0 ? String(dlt) : "±0")),
+        el("p", {class: "muted small"}, it.action.why), el("p", {}, it.learned))));
+    });
+    parts.push(chapter(3, "How we found out", "Each research round, what it looked for, and what it changed.", el("ol", {class: "trail"}, ...trail), traceOf(arts, [3])));
 
-    // 04 Decision-maker
-    let s4;
+    // 04 Buyer
     if (poc.chosen) {
-      const c = b.contact || {};
-      s4 = section(4, "Decision-maker",
-        el("div", {class: "two"},
-          el("div", {class: "box"}, el("h3", {}, "Selected contact"), secret(`${c.name || poc.chosen.first_name}, ${c.title || poc.chosen.position}`),
-            el("div", {class: "small muted", style: "margin-top:4px"}, [c.department ? `Department: ${c.department}` : null, poc.chosen.email].filter(Boolean).join(" · "))),
-          el("div", {class: "box"}, el("h3", {}, "Role relevance"),
-            el("span", {class: "status " + (c.priority && c.priority <= 3 ? "s-done" : "s-review")}, icon(c.priority && c.priority <= 3 ? "i-check" : "i-alert"), c.relevance || "-"),
-            el("div", {class: "small muted", style: "margin-top:6px"}, c.tier ? `ICP tier: ${c.tier} (priority ${c.priority})` : "Chosen by the AI from unusual titles")),
-          el("div", {class: "box"}, el("h3", {}, "Email confidence"), el("div", {class: "num", style: "font-size:18px;font-weight:600"}, poc.chosen.confidence !== null && poc.chosen.confidence !== undefined ? `${poc.chosen.confidence}%` : "-"),
-            el("div", {class: "small muted"}, "From Hunter.io. Scored separately from relevance."))),
-        el("p", {style: "margin:12px 0 0"}, poc.reasoning),
-        (poc.alternatives || []).length ? el("div", {style: "margin-top:10px"}, el("h3", {}, "Alternatives considered"), el("div", {style: "margin-top:4px"}, secret(poc.alternatives.map(a => `${a.first_name || "?"} (${a.position || "?"})`).join(" · ")))) : null,
-        trace(arts, [4]));
+      parts.push(chapter(4, "Who to contact", "Role relevance and email confidence are scored separately. Relevance always wins.",
+        el("div", {class: "cards2"},
+          el("div", {class: "card"}, el("div", {class: "k"}, "Selected buyer"), el("div", {class: "big"}, secret(`${c ? c.name : poc.chosen.first_name}, ${c ? c.title : poc.chosen.position}`)),
+            el("div", {class: "small muted", style: "margin-top:6px"}, c && c.department ? `Department: ${c.department}` : "")),
+          el("div", {class: "card"}, el("div", {class: "k"}, "Role relevance"), el("span", {class: "pill " + (c && c.priority && c.priority <= 3 ? "done" : "review")}, c ? c.relevance : "–"),
+            el("div", {class: "small muted", style: "margin-top:8px"}, c && c.tier ? `${c.tier} · priority ${c.priority} for a company this size` : "")),
+          el("div", {class: "card"}, el("div", {class: "k"}, "Email confidence"), el("div", {class: "big num"}, poc.chosen.confidence != null ? `${poc.chosen.confidence}%` : "–"),
+            el("div", {class: "small muted", style: "margin-top:6px"}, "From Hunter.io"))),
+        el("p", {style: "color:var(--ink-2)"}, poc.reasoning),
+        (poc.alternatives || []).length ? el("p", {class: "small muted"}, "Also considered: ", secret(poc.alternatives.map(a => `${a.first_name || "?"} (${a.position || "?"})`).join(" · "))) : null,
+        traceOf(arts, [4])));
     } else {
-      s4 = section(4, "Decision-maker", el("p", {class: "muted"}, arts["04_poc"] ? `No suitable contact: ${poc.reasoning || ""}` : q.verdict === "qualified" ? "Not looked up yet." : "Contacts are only looked up for qualified companies (saves Hunter credits)."));
+      parts.push(chapter(4, "Who to contact", null, el("p", {class: "muted"}, arts["04_poc"] ? `No suitable buyer: ${poc.reasoning || ""}` : q.verdict === "qualified" ? "Not looked up yet." : "Buyers are only looked up for qualified companies.")));
     }
 
-    // 05 Pain points
-    const s5 = section(5, "Pain-point analysis", pains.length ? el("div", {class: "two"}, ...pains.map((p, i) => el("div", {class: "box"},
-      el("div", {style: "display:flex;gap:8px;align-items:center;margin-bottom:6px"}, badge(p.kind || "inferred"), el("strong", {}, `Pain point ${i + 1}`)),
-      el("div", {style: "font-weight:500"}, p.title), el("p", {class: "small", style: "margin:6px 0"}, p.why_this_person),
-      el("div", {class: "small muted"}, (p.kind || "inferred") === "observed" ? "The company states this itself:" : "Inferred from:"), evidenceList(p.evidence, 2))))
-      : el("p", {class: "muted"}, q.verdict === "qualified" ? "Not identified yet." : "Only identified for qualified companies."),
-      pains.length ? el("p", {class: "small muted", style: "margin-top:10px"}, "Observed pains are stated by the company. Inferred pains are likely for this role but never stated, so the email only raises them as a question.") : null,
-      trace(arts, [5]));
+    // 05 Pains
+    parts.push(chapter(5, "What they're likely struggling with", "Observed means the company says it. Inferred means it's likely for this role, so the email only asks.",
+      pains.length ? el("div", {class: "cards2"}, ...pains.map((p, i) => el("div", {class: "card"},
+        el("div", {style: "display:flex;gap:8px;align-items:center;margin-bottom:10px"}, pill(p.kind || "inferred"), el("span", {class: "k", style: "margin:0"}, `Pain point ${i + 1}`)),
+        el("div", {style: "font:700 18px var(--display);line-height:1.3"}, p.title), el("p", {style: "margin:8px 0 12px;color:var(--ink-2);font-size:15px"}, p.why_this_person),
+        evList(p.evidence, 2)))) : el("p", {class: "muted"}, q.verdict === "qualified" ? "Not worked out yet." : "Only worked out for qualified companies."),
+      traceOf(arts, [5])));
 
     // 06 Outreach
-    let s6;
     if (mail) {
-      const c = b.contact || {};
-      const sendBtn = el("button", {class: "btn"}, icon("i-plane"), "Send test to my inbox");
+      const copyBtn = el("button", {class: "btn ghost sm"}, icon("i-copy"), "Copy email");
+      copyBtn.onclick = async () => {
+        const text = `Subject: ${mail.draft.subject}\n\n${mail.full_body}`;
+        try { await navigator.clipboard.writeText(text); toast("Email copied to clipboard"); }
+        catch { toast("Couldn't copy automatically. Select the text instead."); }
+      };
+      const sendBtn = el("button", {class: "btn sm"}, icon("i-send"), "Send a test to my inbox");
       sendBtn.onclick = async () => {
-        sendBtn.disabled = true;
+        sendBtn.disabled = true; sendBtn.textContent = "Sending…";
         try { const out = await api(`/api/runs/${encodeURIComponent(runId)}/send`, {method: "POST", body: JSON.stringify({domain})});
-          if (out.artifact) r.artifacts[domain]["07_send"] = out.artifact; if (out.brief) r.briefs[domain] = out.brief; }
-        catch (e) { r.artifacts[domain]["07_send"] = {status: "error", output: {status: "error", reason: e.message, subject: ""}}; }
+          if (out.artifact) r.artifacts[domain]["07_send"] = out.artifact; if (out.brief) r.briefs[domain] = out.brief;
+          toast(out.artifact && out.artifact.output && out.artifact.output.status === "sent" ? "Test email sent to your inbox" : "Not sent: " + ((out.artifact || {}).reasoning || "see details")); }
+        catch (e) { toast("Not sent: " + e.message); }
         route(); loadHealth();
       };
-      const sendState = mail.flagged ? el("div", {class: "banner err", style: "margin-top:12px"}, icon("i-alert"), el("div", {}, el("strong", {}, "Not sendable: "), (mail.problems || []).join("; ")))
-        : sent && sent.status === "sent" ? el("div", {class: "banner info", style: "margin-top:12px"}, icon("i-check"), el("div", {}, el("strong", {}, "Test email delivered to your inbox. "), sent.subject || ""))
-        : el("div", {style: "margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"}, health && health.send_enabled ? sendBtn : null,
-            sent ? el("span", {class: "small"}, badge(sent.status), " ", sent.reason || "") : el("span", {class: "small muted"}, health && health.send_enabled ? "Goes only to the owner's inbox. Max 5 a day." : "Sending is switched off on this server."));
-      s6 = section(6, "Personalised outreach",
-        el("div", {class: "two"},
-          el("div", {class: "box"}, el("h3", {}, "Intended prospect"), c.name ? secret(`${c.name}, ${c.title}`) : el("span", {}, "-"), el("div", {class: "small muted", style: "margin-top:4px"}, `Selected decision-maker at ${b.company || domain}. Never emailed.`)),
-          el("div", {class: "box"}, el("h3", {}, "Actual delivery recipient"), el("div", {}, "Your configured owner inbox"), el("div", {class: "small muted", style: "margin-top:4px"}, "Test email only. Subject is prefixed [TEST → contact]."))),
-        el("div", {style: "margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"}, el("strong", {}, "Subject:"), mail.draft.subject,
-          mail.flagged ? el("span", {class: "status s-review"}, icon("i-alert"), "Failed checks") : el("span", {class: "status s-done"}, icon("i-check"), "Passed all email checks")),
-        el("pre", {class: "email"}, mail.full_body),
-        el("dl", {class: "kv", style: "margin-top:12px"},
-          el("dt", {}, "Hook"), el("dd", {}, mail.draft.hook, " · ", link(mail.draft.hook_evidence_url, "source")),
-          el("dt", {}, "Pain point used"), el("dd", {}, mail.draft.pain_point_used),
-          el("dt", {}, "Why written this way"), el("dd", {}, mail.draft.reasoning)),
-        sendState, trace(arts, [6, 7]));
+      const foot = mail.flagged ? el("div", {class: "mail-foot", style: "background:var(--red-bg);color:var(--red)"}, el("b", {}, "Can't be sent: "), (mail.problems || []).join("; "))
+        : el("div", {class: "mail-foot"}, copyBtn,
+            sent && sent.status === "sent" ? el("span", {class: "pill sent"}, icon("i-check"), "Test delivered to your inbox")
+              : health && health.send_enabled ? sendBtn : el("span", {class: "small muted"}, "Sending is switched off on this server."),
+            sent && sent.status !== "sent" ? el("span", {class: "small muted"}, sent.reason || "") : null);
+      parts.push(chapter(6, "What to say", "One verified hook, one pain point, one ask. Checked against the email rules before it can be sent.",
+        el("div", {class: "cards2"},
+          el("div", {class: "card"}, el("div", {class: "k"}, "Intended prospect"), c ? secret(`${c.name}, ${c.title}`) : "–", el("p", {class: "small muted", style: "margin-top:8px"}, `Decision-maker at ${company}. Never emailed.`)),
+          el("div", {class: "card", style: "background:var(--ink);color:var(--ivory);box-shadow:none"}, el("div", {class: "k", style: "color:#A9B4C6"}, "Actually delivered to"),
+            el("div", {style: "font-weight:600"}, "Your own inbox"), el("p", {class: "small", style: "margin-top:8px;color:#C9D1DE"}, "Test email only. The subject starts with [TEST → prospect]."))),
+        el("div", {class: "mail"},
+          el("div", {class: "mail-head"}, el("div", {class: "row"}, el("span", {}, "Subject"), el("b", {}, mail.draft.subject)),
+            el("div", {class: "row"}, el("span", {}, "Checks"), mail.flagged ? el("span", {class: "pill failed"}, "Failed") : el("span", {class: "pill done"}, icon("i-check"), "All rules passed"))),
+          el("pre", {}, mail.full_body), foot),
+        el("dl", {class: "kv"}, el("dt", {}, "Hook"), el("dd", {}, mail.draft.hook, safeUrl(mail.draft.hook_evidence_url) ? el("span", {}, " · ", el("a", {class: "textlink", href: mail.draft.hook_evidence_url, target: "_blank", rel: "noopener noreferrer"}, "source")) : null),
+          el("dt", {}, "Pain point used"), el("dd", {}, mail.draft.pain_point_used), el("dt", {}, "Why this wording"), el("dd", {}, mail.draft.reasoning)),
+        traceOf(arts, [6, 7])));
     } else {
-      s6 = section(6, "Personalised outreach", el("p", {class: "muted"}, q.verdict === "qualified" ? "Draft not written yet." : "No email: only qualified companies get outreach."));
+      parts.push(chapter(6, "What to say", null, el("p", {class: "muted"}, q.verdict === "qualified" ? "Draft not written yet." : "Only qualified companies get an email.")));
     }
-    body.replaceChildren(head, s1, s2, s3, s4, s5, s6);
-  }).catch(e => body.replaceChildren(errorBox(e.message, () => route())));
+    page.replaceChildren(...parts);
+  }).catch(e => page.replaceChildren(errBox(e.message, () => route())));
   return page;
 }
 
-// ===================================================================================================== ICP & scoring
-function viewIcp() {
-  const page = el("div", {class: "page"});
-  page.append(el("div", {class: "page-head"}, el("div", {}, el("h1", {}, "ICP & scoring"),
-    el("p", {}, "Read live from docs/ICP.md. The model only answers yes, no or unknown with a quote; Python applies these points."))));
-  const body = el("div", {class: "page"}, loading());
+// ----- history
+function historyPage() {
+  const page = el("div", {class: "stack"}, el("div", {class: "app-head"}, el("div", {class: "eyebrow"}, "History"), el("h1", {style: "margin-top:10px"}, "Every run, with its evidence.")));
+  const body = el("section", {class: "panel"}, el("div", {class: "skeleton"}));
   page.append(body);
-  icpReady().then(icp => {
-    const s = icp.settings;
+  api("/api/runs").then(list => {
+    const search = el("input", {type: "search", placeholder: "Search by domain", value: ui.hist.q, "aria-label": "Search runs by domain"});
+    const sortSel = el("select", {"aria-label": "Sort runs"}, el("option", {value: "new"}, "Newest first"), el("option", {value: "old"}, "Oldest first"), el("option", {value: "qualified"}, "Most qualified"));
+    sortSel.value = ui.hist.sort;
+    const holder = el("div");
+    const draw = () => {
+      let rows = list.filter(r => !ui.hist.q || r.names.some(n => n.includes(ui.hist.q.toLowerCase())));
+      rows.sort((a, b) => ui.hist.sort === "old" ? a.created.localeCompare(b.created) : ui.hist.sort === "qualified" ? b.qualified - a.qualified : b.created.localeCompare(a.created));
+      holder.replaceChildren(rows.length ? el("div", {class: "plist"}, ...rows.map(r => el("a", {class: "prow", href: `#app/run/${encodeURIComponent(r.run_id)}`},
+        el("div", {class: "co"}, el("b", {}, fmtDate(r.created)), el("span", {}, r.run_id)),
+        r.qualified ? el("span", {class: "pill qualified"}, `${r.qualified} qualified`) : el("span", {class: "pill"}, "0 qualified"),
+        el("div", {class: "why"}, r.names.slice(0, 5).join(", ") + (r.names.length > 5 ? ` +${r.names.length - 5}` : ""),
+          el("div", {class: "small muted"}, `${r.rejected} rejected · ${r.review} need review · ${r.failed} failed`)),
+        el("div", {class: "sc"}, String(r.domains))))) : el("div", {class: "empty"}, "No runs match."));
+    };
+    search.oninput = () => { ui.hist.q = search.value.trim(); draw(); };
+    sortSel.onchange = () => { ui.hist.sort = sortSel.value; draw(); };
+    body.replaceChildren(el("div", {style: "display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px"}, el("div", {style: "flex:1;min-width:220px;max-width:360px"}, search), sortSel), holder);
+    draw();
+  }).catch(e => body.replaceChildren(errBox(e.message, () => route())));
+  return page;
+}
+
+// ----- ICP
+function icpPage() {
+  const page = el("div", {class: "stack"}, el("div", {class: "app-head"}, el("div", {class: "eyebrow"}, "ICP & scoring"),
+    el("h1", {style: "margin-top:10px"}, "How a company earns its score."), el("p", {}, "Read live from docs/ICP.md. Change a number there and the scoring changes.")));
+  const body = el("div", {class: "stack"}, el("div", {class: "skeleton"}));
+  page.append(body);
+  icpReady().then(x => {
+    const s = x.settings;
     body.replaceChildren(
-      el("section", {class: "card"}, el("h2", {}, "Score bands"), el("div", {class: "kpis", style: "margin-top:12px"},
-        el("div", {class: "kpi"}, el("b", {}, `${s.qualified_min_score}+`), el("span", {}, "Qualified")),
-        el("div", {class: "kpi"}, el("b", {}, `${s.borderline_min_score}–${s.qualified_min_score - 1}`), el("span", {}, "Agent researches more")),
-        el("div", {class: "kpi"}, el("b", {}, `<${s.borderline_min_score}`), el("span", {}, "Rejected")),
-        el("div", {class: "kpi"}, el("b", {}, `${s.funding_window_months} mo`), el("span", {}, "Recent-funding window")))),
-      el("div", {class: "grid-2"},
-        el("section", {class: "card"}, el("h2", {}, "Rubric rows"), el("div", {class: "tablewrap", style: "margin-top:10px"}, el("table", {},
-          el("thead", {}, el("tr", {}, el("th", {}, "Row"), el("th", {}, "Max points"), el("th", {}, "Critical"))),
-          el("tbody", {}, ...icp.rows.map(r => el("tr", {}, el("td", {}, r.name), el("td", {class: "num"}, r.id === "COMP" ? `−${r.max_points}` : r.max_points), el("td", {}, r.critical ? "Yes" : "No"))))))),
-        el("section", {class: "card"}, el("h2", {}, "Hard disqualifiers"), el("ul", {class: "ev"}, ...icp.disqualifiers.map(d => el("li", {}, el("strong", {}, d.name), el("div", {class: "small muted"}, d.check)))),
-          el("h3", {style: "margin-top:12px"}, "Known competitors"), el("p", {class: "small"}, icp.competitors.join(", ")),
-          el("h3", {}, "Known Sprinto customers"), el("p", {class: "small"}, icp.known_customers.join(", ")))),
-      el("section", {class: "card"}, el("h2", {}, `Scoring rules (${icp.rules.length})`), el("div", {class: "tablewrap", style: "margin-top:10px"}, el("table", {},
-        el("thead", {}, el("tr", {}, ...["Rule", "Row", "Points", "Question"].map(h => el("th", {}, h)))),
-        el("tbody", {}, ...icp.rules.map(r => el("tr", {}, el("td", {}, el("code", {}, r.id)), el("td", {}, r.row), el("td", {class: "num"}, r.points), el("td", {class: "small"}, r.question))))))),
-      el("section", {class: "card"}, el("h2", {}, "Decision-maker priority"), el("div", {class: "tablewrap", style: "margin-top:10px"}, el("table", {},
-        el("thead", {}, el("tr", {}, ...["Company size", "Priority", "Role"].map(h => el("th", {}, h)))),
-        el("tbody", {}, ...icp.poc_tiers.map(t => el("tr", {}, el("td", {}, t.band === "any" ? "Any size" : t.band.replace("-100000", "+").replace("-", "–")), el("td", {class: "num"}, t.priority), el("td", {}, t.title)))))),
-        el("p", {class: "small muted", style: "margin-top:10px"}, `Relevance first; Hunter email confidence (prefer ${s.min_confidence}%+) only breaks ties. No relevant contact means "no contact", never a random executive.`)));
-  }).catch(e => body.replaceChildren(errorBox(e.message, () => route())));
+      el("section", {class: "panel"}, el("div", {class: "keyfacts", style: "border:0"},
+        el("div", {}, el("div", {class: "k"}, "Qualified"), el("div", {class: "v", style: "font-size:28px"}, `${s.qualified_min_score}+`)),
+        el("div", {}, el("div", {class: "k"}, "Research more"), el("div", {class: "v", style: "font-size:28px"}, `${s.borderline_min_score}–${s.qualified_min_score - 1}`)),
+        el("div", {}, el("div", {class: "k"}, "Rejected"), el("div", {class: "v", style: "font-size:28px"}, `< ${s.borderline_min_score}`)),
+        el("div", {}, el("div", {class: "k"}, "Funding window"), el("div", {class: "v", style: "font-size:28px"}, `${s.funding_window_months} mo`)))),
+      el("section", {class: "panel"}, el("h2", {}, "The six things we look for"), el("div", {style: "margin-top:8px"}, ...x.rows.map(r => el("div", {class: "rub", style: "grid-template-columns:minmax(0,1fr) 90px"},
+        el("div", {class: "name"}, r.name, r.critical ? el("small", {}, " · critical") : null,
+          el("div", {class: "small muted", style: "font-weight:400;margin-top:4px"}, x.rules.filter(q => q.row === r.id).map(q => q.question).join(" · "))),
+        el("div", {class: "pts"}, r.id === "COMP" ? `−${r.max_points}` : `${r.max_points}`))))),
+      el("div", {class: "twocol"},
+        el("section", {class: "panel"}, el("h2", {}, "Instant disqualifiers"), el("ul", {style: "margin:12px 0 0;padding-left:20px;display:grid;gap:8px"}, ...x.disqualifiers.map(d => el("li", {}, el("b", {}, d.name), el("div", {class: "small muted"}, d.check)))),
+          el("p", {class: "small muted", style: "margin-top:14px"}, el("b", {}, "Competitors: "), x.competitors.join(", ")),
+          el("p", {class: "small muted", style: "margin-top:6px"}, el("b", {}, "Known Sprinto customers: "), x.known_customers.join(", "))),
+        el("section", {class: "panel"}, el("h2", {}, "Who we contact"), el("div", {class: "tablewrap", style: "margin-top:8px"}, el("table", {},
+          el("thead", {}, el("tr", {}, ...["Company size", "#", "Role"].map(h => el("th", {}, h)))),
+          el("tbody", {}, ...x.poc_tiers.map(t => el("tr", {}, el("td", {}, t.band === "any" ? "Any" : t.band.replace("-100000", "+").replace("-", "–")), el("td", {class: "num"}, t.priority), el("td", {}, t.title)))))))));
+  }).catch(e => body.replaceChildren(errBox(e.message, () => route())));
   return page;
 }
 
-// ===================================================================================================== System health
-function viewHealth() {
-  const page = el("div", {class: "page"});
-  page.append(el("div", {class: "page-head"}, el("div", {}, el("h1", {}, "System health"), el("p", {}, "Services, limits and remaining quota. No secrets are shown here.")),
-    el("button", {class: "btn ghost", onclick: async () => { await loadHealth(); quota = null; route(); }}, "Refresh")));
-  const body = el("div", {class: "page"}, loading());
+// ----- system
+function systemPage() {
+  const page = el("div", {class: "stack"}, el("div", {class: "app-head"}, el("div", {class: "eyebrow"}, "System"), el("h1", {style: "margin-top:10px"}, "Services, quotas and guardrails."),
+    el("p", {}, "No secrets are ever shown here.")));
+  const body = el("div", {class: "stack"}, el("div", {class: "skeleton"}));
   page.append(body);
-  Promise.all([health ? Promise.resolve(health) : loadHealth().then(() => health),
-               quota ? Promise.resolve(quota) : api("/api/quota").then(x => (quota = x)).catch(() => null)]).then(([h, qu]) => {
-    if (!h) { body.replaceChildren(errorBox("The server did not answer the health check.", () => route())); return; }
-    const svc = (name, ok, detail, fix) => el("tr", {}, el("td", {}, name),
-      el("td", {}, el("span", {class: "status " + (ok ? "s-done" : "s-review")}, icon(ok ? "i-check" : "i-alert"), ok ? "Operational" : "Needs setup")),
-      el("td", {class: "small"}, detail), el("td", {class: "small muted"}, ok ? "" : fix));
+  Promise.all([loadHealth().then(() => health), api("/api/quota").then(x => (quota = x)).catch(() => null)]).then(([h, qu]) => {
+    if (!h) { body.replaceChildren(errBox("The server didn't answer the health check.", () => route())); return; }
     const u = h.usage_today || {}, L = h.limits || {};
-    const hunterLeft = qu && qu.hunter_searches_left !== null && qu.hunter_searches_left !== undefined ? qu.hunter_searches_left : "-";
+    const svc = (name, ok, detail, fix) => el("div", {class: "rub", style: "grid-template-columns:minmax(0,1fr) auto"},
+      el("div", {}, el("div", {class: "name"}, name), el("div", {class: "small muted", style: "margin-top:4px"}, ok ? detail : fix)), el("span", {class: "pill " + (ok ? "done" : "review")}, ok ? "Operational" : "Needs setup"));
     body.replaceChildren(
-      el("div", {class: "kpis"},
-        el("div", {class: "kpi"}, el("b", {}, `${u.domains_today ?? "-"} / ${L.runs_per_day}`), el("span", {}, "Companies analysed today (all users)")),
-        el("div", {class: "kpi"}, el("b", {}, `${u.emails_today ?? "-"} / ${L.emails_per_day}`), el("span", {}, "Test emails sent today")),
-        el("div", {class: "kpi"}, el("b", {}, String(hunterLeft)), el("span", {}, `Hunter searches left (stops below ${qu ? qu.hunter_min_remaining : 3})`)),
-        el("div", {class: "kpi"}, el("b", {}, String(L.llm_calls_per_domain ?? "-")), el("span", {}, "Max AI calls per company"))),
-      el("section", {class: "card"}, el("h2", {}, "Services"), el("div", {class: "tablewrap", style: "margin-top:10px"}, el("table", {},
-        el("thead", {}, el("tr", {}, ...["Service", "Status", "Detail", "If it needs setup"].map(x => el("th", {}, x)))),
-        el("tbody", {},
-          svc("Database (Neon)", h.database === "ok", h.database === "ok" ? "Connected" : h.database, "Check DATABASE_URL in the Vercel settings."),
-          svc("AI model (Gemini)", h.gemini === "configured", `${h.gemini_model || "-"} · web search ${h.web_search}`, "Check GEMINI_API_KEY and GEMINI_MODEL."),
-          svc("Contacts (Hunter.io)", h.hunter === "configured", "Only called for qualified companies; results cached", "Check HUNTER_API_KEY."),
-          svc("Email (Gmail)", h.gmail === "configured", h.send_enabled ? "Test sends allowed, owner inbox only" : "Sending switched off (dry run)", "Run scripts/gmail_auth.py and add the GMAIL_* settings."))))),
-      el("section", {class: "card"}, el("h2", {}, "Guardrails in force"), el("ul", {class: "ev"},
-        el("li", {}, `At most ${L.domains_per_run} companies per run and ${L.runs_per_day} per day for everyone`),
-        el("li", {}, `At most ${L.pages_per_domain} pages per site plus ${L.agent_rounds} research rounds; robots.txt respected`),
-        el("li", {}, `At most ${L.llm_calls_per_domain} AI calls per company; repeated questions are answered from the cache for free`),
-        el("li", {}, `Emails go only to the owner's inbox, at most ${L.emails_per_day} a day, never twice per company in a run`))));
+      el("section", {class: "panel"}, el("div", {class: "keyfacts", style: "border:0"},
+        el("div", {}, el("div", {class: "k"}, "Companies today"), el("div", {class: "v", style: "font-size:28px"}, `${u.domains_today ?? "–"}/${L.runs_per_day}`)),
+        el("div", {}, el("div", {class: "k"}, "Test emails today"), el("div", {class: "v", style: "font-size:28px"}, `${u.emails_today ?? "–"}/${L.emails_per_day}`)),
+        el("div", {}, el("div", {class: "k"}, "Hunter searches left"), el("div", {class: "v", style: "font-size:28px"}, qu && qu.hunter_searches_left != null ? String(qu.hunter_searches_left) : "–")),
+        el("div", {}, el("div", {class: "k"}, "AI calls per company"), el("div", {class: "v", style: "font-size:28px"}, `≤ ${L.llm_calls_per_domain}`)))),
+      el("section", {class: "panel"}, el("h2", {}, "Services"),
+        svc("Database · Neon", h.database === "ok", "Connected", "Check DATABASE_URL in Vercel."),
+        svc("AI · Gemini", h.gemini === "configured", `${h.gemini_model} · web search ${h.web_search}`, "Check GEMINI_API_KEY and GEMINI_MODEL."),
+        svc("Contacts · Hunter.io", h.hunter === "configured", "Qualified companies only; results cached", "Check HUNTER_API_KEY."),
+        svc("Email · Gmail", h.gmail === "configured", h.send_enabled ? "Test sends allowed, owner inbox only" : "Sending switched off", "Run scripts/gmail_auth.py and add the GMAIL_* settings.")),
+      el("section", {class: "panel"}, el("h2", {}, "Guardrails"), el("ul", {style: "margin:12px 0 0;padding-left:20px;display:grid;gap:6px;color:var(--ink-2)"},
+        el("li", {}, `${L.domains_per_run} companies per run, ${L.runs_per_day} a day for everyone`),
+        el("li", {}, `${L.pages_per_domain} pages per site plus ${L.agent_rounds} research rounds; robots.txt respected`),
+        el("li", {}, `${L.llm_calls_per_domain} AI calls per company at most; repeated questions are free from the cache`),
+        el("li", {}, `Emails only to the owner's inbox, ${L.emails_per_day} a day, never twice per company in a run`))));
   });
   return page;
 }
 
-// ===================================================================================================== How it works
-function viewDocs() {
-  const gh = "https://github.com/anshullmishra-png/sprinto-outbound";
-  return el("div", {class: "page doc"},
-    el("div", {class: "page-head"}, el("div", {}, el("h1", {}, "How it works"), el("p", {}, "The system behind the workspace, for reviewers."))),
-    el("section", {class: "card"}, el("h2", {}, "Three phases, seven steps"),
-      el("ol", {class: "ev"},
-        el("li", {}, el("strong", {}, "Discovery (steps 1–2): "), "read up to 6 public pages per site (robots.txt respected, 1 request a second), then extract a company profile in which every fact quotes its page."),
-        el("li", {}, el("strong", {}, "Qualification (step 3): "), "the model answers each ICP question yes, no or unknown with a quote; Python checks every quote and applies fixed points. When key facts are missing, an agent reads more pages or searches the web, up to 3 rounds."),
-        el("li", {}, el("strong", {}, "Outreach preparation (steps 4–7): "), "Hunter.io finds the decision-maker (qualified companies only), two pain points are labelled observed or inferred, and a short email is drafted and checked. A test send goes only to the owner's inbox."))),
-    el("section", {class: "card"}, el("h2", {}, "Why the scores can be trusted"),
-      el("p", {}, "The model never assigns points. A rule earns points only when its quote is found on a page we actually fetched, or in a cited search result. The same evidence always gives the same score, and research rounds can add evidence but never silently lose it.")),
-    el("section", {class: "card"}, el("h2", {}, "Read more"), el("ul", {class: "ev"},
-      el("li", {}, link(`${gh}#architecture`, "Architecture and guardrails (README)")),
-      el("li", {}, link(`${gh}/blob/main/docs/ICP.md`, "ICP and scoring rubric")),
-      el("li", {}, link(`${gh}/blob/main/docs/EVIDENCE_MAP.md`, "Evidence map and source policy")),
-      el("li", {}, link(`${gh}/blob/main/docs/DEFENSE_NOTES.md`, "Defense notes")))));
-}
-
-// ===================================================================================================== boot
+// ============================================================================================= boot
+async function loadHealth() { try { health = await api("/api/health"); } catch { health = null; } }
 route();
-Promise.all([loadHealth(), icpReady().catch(() => null), api("/api/quota").then(x => (quota = x)).catch(() => null)]).then(() => {
-  const h = location.hash.replace(/^#/, "").split("/")[0];
-  if (["new", "icp", "health", ""].includes(h)) route();
-});
+Promise.all([loadHealth(), icpReady().catch(() => null)]).then(() => { if (location.hash.startsWith("#app") && !location.hash.includes("/run/")) route(); });
 </script>
 </body>
 </html>
