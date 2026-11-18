@@ -53,3 +53,12 @@ click **Run pipeline (dry-run)**. Send me the link and I'll add it to the README
 ## G. Before the defense
 Read `docs/DEFENSE_NOTES.md`. After your real run, replace the `‹fill after run›` placeholders with your numbers
 (or ask Claude Code to do it from `runs\<id>\summary.csv`).
+
+## H. Two decisions from the L4 lecture (your call; nothing breaks if you leave them)
+Read `docs/EVIDENCE_MAP.md` first (5 min). Then decide:
+1. **Unknown stage: `insufficient_data` (today) or "qualify-and-flag" (lecture's suggestion)?** Today a company with
+   a clear compliance gap but no visible funding/headcount is *not* qualified, so it costs no Hunter credit and lands
+   in "Needs a human". Qualify-and-flag would draft an email for it with a ⚠ marker. Tell Claude Code which you want.
+2. **Check the "Needs a human" list after your first real run** (`runs\<id>\decision_report.md`, near the top). For
+   each domain named there, open the page it mentions in a browser and see whether a person would agree with the
+   verdict. That's your accuracy number for the kill criterion ("below 60% → shut it down").

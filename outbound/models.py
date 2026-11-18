@@ -40,8 +40,16 @@ class Citation(BaseModel):
 
 
 # ---------------------------------------------------------------- step 1: scrape
+PageQuality = Literal["ok", "thin", "bot_blocked", "rate_limited", "login_wall", "captcha", "error"]
+
+
 class PageContent(BaseModel):
-    """One fetched page: cleaned text (already truncated) or the reason it failed."""
+    """One fetched page: cleaned text (already truncated) or the reason it failed.
+
+    `quality` catches the failures that DON'T raise an error: a page can return HTTP 200 and still be
+    useless (a JavaScript shell with 3 words, a Cloudflare challenge, a login form). Only `ok` pages
+    count as "we read it"; anything else means "we don't know what's on it", never "it's empty".
+    """
 
     url: str
     status_code: int | None = None
@@ -49,6 +57,13 @@ class PageContent(BaseModel):
     text: str = ""
     truncated: bool = False
     error: str | None = None
+    word_count: int = 0
+    quality: PageQuality = "ok"
+    quality_note: str | None = None  # plain-English reason when quality != "ok"
+
+    @property
+    def readable(self) -> bool:
+        return not self.error and self.quality == "ok"
 
 
 class DetectedSignal(BaseModel):

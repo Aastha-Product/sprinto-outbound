@@ -115,6 +115,17 @@ checked and found nothing (e.g., no trust page).
 | GEO_EU_UK | GEO | 5 | presence | Does the company sell to EU or UK customers? |
 | COMP_ON_COMPETITOR | COMP | -20 | presence | Does the company use Vanta, Drata, Secureframe, Scrut, Thoropass or OneTrust (trust center, badge, "powered by")? |
 
+## Rules that need a readable trust page
+> These rules claim something is **missing** ("no SOC 2", "only one framework", "GDPR only"). "We didn't see it" is
+> only proof when we could actually read where it would be. So if a trust / security / compliance page **exists but
+> could not be read** (JavaScript-only, bot-blocked, robots.txt, login), Python forces these rules to `unknown`
+> (0 points) instead of letting a blank page count as a compliance gap. A trust page that returns 404 does not
+> block them: that *is* evidence of absence.
+
+- GAP_NO_TRUST_PAGE
+- GAP_ONE_FRAMEWORK
+- GAP_GDPR_ONLY
+
 ## Verdicts
 | Setting | Value |
 |---|---|

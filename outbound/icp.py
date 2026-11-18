@@ -66,6 +66,7 @@ class ICP:
     settings: dict[str, int]
     poc_tiers: list[PocTier]
     personas_text: str
+    needs_readable_trust_page: tuple[str, ...] = ()
 
     @property
     def rules_by_id(self) -> dict[str, Rule]:
@@ -172,6 +173,14 @@ def parse_icp(text: str) -> ICP:
     settings = _settings_table(_section(text, "Verdicts"), 0, "Verdicts")
     settings.update(_settings_table(poc_section, 1, "PoC settings"))
 
+    try:  # optional section; older ICP files without it still load
+        trust_rules = tuple(re.findall(r"^\s*[-*]\s+([A-Z][A-Z0-9_]+)\s*$", _section(text, "Rules that need a readable trust page"), re.MULTILINE))
+    except ICPFormatError:
+        trust_rules = ()
+    known_ids = {r.id for r in rules}
+    if unknown_ids := [r for r in trust_rules if r not in known_ids]:
+        raise ICPFormatError(f"docs/ICP.md: 'Rules that need a readable trust page' lists unknown rule ids {unknown_ids}")
+
     return ICP(
         text=text,
         rows=rows,
@@ -183,6 +192,7 @@ def parse_icp(text: str) -> ICP:
         settings=settings,
         poc_tiers=tiers,
         personas_text=_section(text, "Typical pain points").strip(),
+        needs_readable_trust_page=trust_rules,
     )
 
 

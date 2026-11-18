@@ -14,6 +14,7 @@ Results are cached for a few days so re-runs don't re-download everything.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -43,6 +44,24 @@ FALLBACK_PATHS = ["/about", "/about-us", "/company", "/careers", "/press", "/new
 SKIP_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".zip", ".mp4", ".mp3", ".xml", ".json", ".css", ".js")
 SCRAPE_CACHE_DAYS = 7
 DELAY_SECONDS = 1.0
+
+# Silent-failure detection (lecture L4: "six of eight failure modes produce no error").
+# A 200 page with fewer readable words than this is treated as NOT read: usually the content is drawn by
+# JavaScript after load (View Source != Inspect). Real example: trust.vanta.com returns 3 words.
+THIN_WORDS = 50
+BOT_MARKERS = ("just a moment...", "cf-chl", "challenge-platform", "attention required! | cloudflare", "verifying you are human",
+               "checking your browser", "_incapsula_resource", "px-captcha")
+CAPTCHA_MARKERS = ("g-recaptcha", "h-captcha", "hcaptcha.com", "recaptcha/api", "cf-turnstile")
+QUALITY_NOTES = {
+    "thin": "only {words} words of readable text; the content is probably drawn by JavaScript after load "
+            "(needs a real browser or another source)",
+    "bot_blocked": "bot protection (e.g. Cloudflare) answered instead of the site; not retried, we respect the barrier",
+    "rate_limited": "the site asked us to slow down (HTTP 429); not retried in this run",
+    "login_wall": "the page asks for a login; we never log in",
+    "captcha": "the page shows a CAPTCHA; we never solve CAPTCHAs",
+}
+EMBEDDED_MAX_CHARS = 1500
+EMBEDDED_HEADER = "[data embedded in the page's HTML]"
 
 # Cheap text signals (regex, case-insensitive). These are hints for the LLM, not scores.
 MENTION_PATTERNS: dict[str, str] = {
@@ -103,6 +122,131 @@ def _visible_text(html: str, drop_chrome: bool) -> str:
 def page_title(html: str) -> str | None:
     soup = BeautifulSoup(html, "html.parser")
     return soup.title.get_text(strip=True)[:200] if soup.title else None
+
+
+def embedded_data_text(html: str) -> str:
+    """Facts a site ships inside its HTML for search engines and its own app, readable without a browser.
+
+    - meta description / og:description (a one-line "what we do")
+    - JSON-LD (`<script type="application/ld+json">`): Organization name, description, numberOfEmployees,
+      foundingDate, address country
+    - Next.js `__NEXT_DATA__`: the page's own data feed; we keep its sentence-like strings
+    Pages that look empty to a plain request often still carry these.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    lines: list[str] = []
+    for attrs in ({"name": "description"}, {"property": "og:description"}):
+        tag = soup.find("meta", attrs=attrs)
+        if tag and tag.get("content"):
+            lines.append(tag["content"].strip())
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for node in _jsonld_nodes(data):
+            lines.extend(_jsonld_facts(node))
+    next_data = soup.find("script", id="__NEXT_DATA__")
+    if next_data and next_data.string:
+        try:
+            lines.extend(s for s in _string_leaves(json.loads(next_data.string)) if len(s.split()) >= 6)
+        except json.JSONDecodeError:
+            pass
+    unique = list(dict.fromkeys(" ".join(line.split()) for line in lines if line and line.strip()))
+    return truncate("\n".join(unique), EMBEDDED_MAX_CHARS)[0] if unique else ""
+
+
+def _jsonld_nodes(data) -> list[dict]:
+    if isinstance(data, list):
+        return [n for item in data for n in _jsonld_nodes(item)]
+    if isinstance(data, dict):
+        graph = data.get("@graph")
+        return [data] + ([n for item in graph for n in _jsonld_nodes(item)] if isinstance(graph, list) else [])
+    return []
+
+
+def _jsonld_facts(node: dict) -> list[str]:
+    kind = node.get("@type")
+    kinds = kind if isinstance(kind, list) else [kind]
+    if not any(k in ("Organization", "Corporation", "SoftwareApplication", "WebApplication", "Product", "LocalBusiness") for k in kinds):
+        return []
+    facts = []
+    if isinstance(node.get("name"), str):
+        facts.append(f"Name: {node['name']}")
+    if isinstance(node.get("description"), str):
+        facts.append(node["description"])
+    employees = node.get("numberOfEmployees")
+    if isinstance(employees, dict):
+        employees = employees.get("value") or "-".join(str(employees[k]) for k in ("minValue", "maxValue") if k in employees)
+    if employees:
+        facts.append(f"Number of employees: {employees}")
+    if node.get("foundingDate"):
+        facts.append(f"Founded: {node['foundingDate']}")
+    address = node.get("address")
+    if isinstance(address, dict) and address.get("addressCountry"):
+        country = address["addressCountry"]
+        facts.append(f"Country: {country.get('name') if isinstance(country, dict) else country}")
+    return [str(f) for f in facts]
+
+
+def _string_leaves(data, limit: int = 200) -> list[str]:
+    out: list[str] = []
+    stack = [data]
+    while stack and len(out) < limit:
+        item = stack.pop()
+        if isinstance(item, dict):
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+        elif isinstance(item, str) and "<" not in item and "http" not in item:
+            out.append(item)
+    return out
+
+
+def assess_page(html: str, text: str, status: int | None = None) -> str:
+    """Classify a page that came back without an HTTP error. Returns a PageQuality value.
+
+    This is the code-level check from the lecture: "a field is either populated or it isn't".
+    We don't ask the model whether the page was useful; we count.
+    """
+    lower = html[:200_000].lower()
+    words = len(text.split())
+    if status == 429:
+        return "rate_limited"
+    if any(m in lower for m in BOT_MARKERS) and words < 200:
+        return "bot_blocked"
+    if any(m in lower for m in CAPTCHA_MARKERS) and words < 200:
+        return "captcha"
+    if 'type="password"' in lower and words < 150:
+        return "login_wall"
+    if words < THIN_WORDS:
+        return "thin"
+    return "ok"
+
+
+def quality_note(quality: str, words: int) -> str | None:
+    return QUALITY_NOTES[quality].format(words=words) if quality in QUALITY_NOTES else None
+
+
+def http_error_quality(resp: httpx.Response) -> tuple[str, str]:
+    """Name the failure for an HTTP error, so the report says WHY (bot wall vs rate limit vs missing page)."""
+    body = resp.text[:20_000].lower() if resp.content else ""
+    if resp.status_code == 429:
+        return "rate_limited", f"HTTP 429: {QUALITY_NOTES['rate_limited']}"
+    if resp.status_code in (403, 503) and (any(m in body for m in BOT_MARKERS) or resp.headers.get("cf-mitigated")):
+        return "bot_blocked", f"HTTP {resp.status_code}: {QUALITY_NOTES['bot_blocked']}"
+    return "error", f"HTTP {resp.status_code}"
+
+
+def recheck_cached_page(page: PageContent) -> PageContent:
+    """Scrapes cached before quality checks existed: classify them from their saved text."""
+    if page.error:
+        page.quality = "error"
+    elif page.word_count == 0 and page.quality == "ok":
+        page.word_count = len(page.text.split())
+        if page.word_count < THIN_WORDS:
+            page.quality, page.quality_note = "thin", quality_note("thin", page.word_count)
+    return page
 
 
 def truncate(text: str, max_chars: int) -> tuple[str, bool]:
@@ -268,23 +412,33 @@ class Fetcher:
     def fetch(self, url: str, domain: str) -> tuple[PageContent, str]:
         """Fetch one page. Returns (PageContent, raw_html). Errors are recorded, never raised."""
         if not same_site(url, domain):
-            return PageContent(url=url, error="refused: different domain"), ""
+            return PageContent(url=url, error="refused: different domain", quality="error"), ""
         if not self.allowed(url):
-            return PageContent(url=url, error="skipped: disallowed by robots.txt"), ""
+            return PageContent(url=url, error="skipped: disallowed by robots.txt", quality="error"), ""
         try:
             resp = self._raw_get(url)
         except httpx.HTTPError as exc:
-            return PageContent(url=url, error=f"request failed: {type(exc).__name__}"), ""
+            return PageContent(url=url, error=f"request failed: {type(exc).__name__}", quality="error"), ""
         final = str(resp.url)
         if not same_site(final, domain):
-            return PageContent(url=url, status_code=resp.status_code, error=f"redirected off-site to {urlparse(final).hostname}"), ""
+            return PageContent(url=url, status_code=resp.status_code, error=f"redirected off-site to {urlparse(final).hostname}", quality="error"), ""
         if resp.status_code >= 400:
-            return PageContent(url=final, status_code=resp.status_code, error=f"HTTP {resp.status_code}"), ""
+            quality, message = http_error_quality(resp)
+            return PageContent(url=final, status_code=resp.status_code, error=message, quality=quality), ""
         if "html" not in resp.headers.get("content-type", "html"):
-            return PageContent(url=final, status_code=resp.status_code, error="not an HTML page"), ""
+            return PageContent(url=final, status_code=resp.status_code, error="not an HTML page", quality="error"), ""
         html = resp.text
-        text, cut = truncate(html_to_text(html, final), self.settings.max_chars_per_page)
-        return PageContent(url=final, status_code=resp.status_code, title=page_title(html), text=text, truncated=cut), html
+        main = html_to_text(html, final)
+        words = len(main.split())
+        quality = assess_page(html, main, resp.status_code)
+        # Add what the HTML carries for machines (meta description, JSON-LD, __NEXT_DATA__) if it's new.
+        embedded = "\n".join(line for line in embedded_data_text(html).splitlines() if line not in main)
+        budget = self.settings.max_chars_per_page - (len(embedded) + len(EMBEDDED_HEADER) + 4 if embedded else 0)
+        text, cut = truncate(main, max(budget, 500))
+        if embedded:
+            text = f"{text}\n\n{EMBEDDED_HEADER}\n{embedded}".strip()
+        return PageContent(url=final, status_code=resp.status_code, title=page_title(html), text=text, truncated=cut,
+                           word_count=words, quality=quality, quality_note=quality_note(quality, words)), html
 
     def close(self) -> None:
         self.client.close()
@@ -297,7 +451,9 @@ def scrape_domain(domain: str, settings: Settings, store: Store | None = None, f
         cached = store.get_cache("scrape", domain, max_age_days=SCRAPE_CACHE_DAYS)
         if cached:
             log.info("[%s] scrape: using cached result", domain)
-            return ScrapeResult.model_validate(cached)
+            result = ScrapeResult.model_validate(cached)
+            result.pages = [recheck_cached_page(p) for p in result.pages]
+            return result
 
     own_fetcher = fetcher is None
     fetcher = fetcher or Fetcher(settings)
@@ -315,8 +471,11 @@ def scrape_domain(domain: str, settings: Settings, store: Store | None = None, f
                 _record(result, page, page_html, domain)
             fetched = {clean_url(p.url) for p in result.pages}
             result.candidate_links = candidate_links(html, home.url, domain, exclude=fetched)
-        ok = sum(1 for p in result.pages if not p.error)
-        log.info("[%s] scrape: %d page(s) ok, %d failed, %d signal(s)", domain, ok, len(result.pages) - ok, len(result.detected_signals))
+        ok = sum(1 for p in result.pages if p.readable)
+        log.info("[%s] scrape: %d page(s) readable, %d not, %d signal(s)", domain, ok, len(result.pages) - ok, len(result.detected_signals))
+        for p in result.pages:
+            if not p.error and not p.readable:
+                log.warning("[%s] %s looks like a silent failure: %s", domain, p.url, p.quality_note)
     finally:
         if own_fetcher:
             fetcher.close()

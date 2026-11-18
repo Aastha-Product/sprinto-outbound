@@ -27,6 +27,7 @@ from outbound.models import (
     AgentIteration,
     CompanyProfile,
     Evidence,
+    PageContent,
     QualificationResult,
     ScoreLine,
     ScrapeResult,
@@ -55,10 +56,21 @@ class QualifyContext:
     fetcher: Fetcher | None = None
     searches: list[str] = field(default_factory=list)
     extra_pages: list[str] = field(default_factory=list)
+    extra_page_records: list[PageContent] = field(default_factory=list)  # pages the agent loop fetched
 
     @property
     def company(self) -> str:
         return self.profile.name or self.domain
+
+    def unreadable_pages(self) -> list[PageContent]:
+        """Pages that exist (or may exist) but whose content we could not read. 404/410 = really missing, so excluded."""
+        return [p for p in self.scrape.pages + self.extra_page_records
+                if not p.readable and p.status_code not in (404, 410)]
+
+    def trust_page_blockers(self) -> list[PageContent]:
+        """Unreadable pages that would hold certifications (trust / security / compliance)."""
+        return [p for p in self.unreadable_pages()
+                if any(k in (urlparse(p.url).hostname or "") + urlparse(p.url).path.lower() for k in TRUST_PAGE_HINTS)]
 
     def fetchable_pages(self) -> list[str]:
         """Same-site pages not fetched yet: links found by the scraper, then common fallback paths."""
@@ -76,6 +88,12 @@ class QualifyContext:
 
 # Pages most likely to state headcount / funding (used by the Python fallback below).
 STAGE_PAGE_HINTS = ("about", "company", "team", "careers", "jobs", "press", "news", "funding", "investors", "announc")
+# Where certifications live. If one of these pages exists but can't be read, "no SOC 2 found" proves nothing.
+TRUST_PAGE_HINTS = ("trust", "security", "compliance")
+
+
+def page_problem(p: PageContent) -> str:
+    return p.error or p.quality_note or p.quality
 
 
 # ---------------------------------------------------------------- hard disqualifiers (Python)
@@ -211,6 +229,7 @@ def extract_signals(ctx: QualifyContext) -> tuple[list[Signal], str]:
             "profile": ctx.profile.model_dump_json(indent=1, exclude={"evidence"}),
             "content": ctx.corpus.as_prompt_block(ctx.settings.max_chars_per_page),
             "signals": _signals_text(ctx),
+            "unreadable": "\n".join(f"- {p.url}: {page_problem(p)}" for p in ctx.unreadable_pages()) or "(none)",
         },
         SignalReport,
     )
@@ -227,6 +246,15 @@ def clean_signals(raw: list[Signal], ctx: QualifyContext) -> list[Signal]:
             by_id[s.rule_id] = s
     for rule_id in kinds:
         by_id.setdefault(rule_id, Signal(rule_id=rule_id, value="unknown"))
+
+    # "Not found" only counts if we could read where it would be (ICP.md: Rules that need a readable trust page).
+    if blockers := ctx.trust_page_blockers():
+        b = blockers[0]
+        for rule_id in ctx.icp.needs_readable_trust_page:
+            sig = by_id.get(rule_id)
+            if sig and sig.value == "yes":
+                by_id[rule_id] = Signal(rule_id=rule_id, value="unknown",
+                                        detail=f"can't confirm: {b.url} exists but could not be read ({page_problem(b)})")
 
     # Deterministic: a competitor link/badge found by the scraper always counts for the penalty rule.
     comp_hits = [d for d in ctx.scrape.detected_signals if d.signal.startswith(("competitor_link:", "competitor_text:"))]
@@ -312,8 +340,11 @@ def execute_action(action: AgentAction, ctx: QualifyContext) -> tuple[str, bool]
     if action.action == "fetch_page":
         page, sigs = fetch_extra_page(action.argument, ctx.domain, ctx.settings, ctx.fetcher)
         ctx.extra_pages.append(page.url)
+        ctx.extra_page_records.append(page)
         if page.error:
             return f"could not fetch {action.argument}: {page.error}", False
+        if not page.readable and not sigs and len(page.text.split()) < 20:
+            return f"fetched {page.url} but it is not readable ({page_problem(page)})", False
         ctx.scrape.detected_signals.extend(sigs)
         ctx.corpus.add_page(page, sigs)
         return f"fetched {page.url} ({len(page.text)} characters of text, {len(sigs)} cheap signals)", True

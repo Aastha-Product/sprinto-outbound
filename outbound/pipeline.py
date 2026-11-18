@@ -132,8 +132,10 @@ class DomainRunner:
         res = scrape_domain(self.domain, self.settings, self.store, use_cache=self.options.use_cache)
         ok = [p for p in res.pages if not p.error]
         failed = [f"{p.url} ({p.error})" for p in res.pages if p.error]
+        silent = [f"{p.url} ({p.quality_note or p.quality})" for p in ok if not p.readable]
         reasoning = (f"Fetched {len(ok)} page(s) from {self.domain}: {', '.join(p.url for p in ok) or 'none'}. "
                      f"{'Failed: ' + '; '.join(failed) + '. ' if failed else ''}"
+                     f"{'Fetched but NOT readable (treated as unknown, not as empty): ' + '; '.join(silent) + '. ' if silent else ''}"
                      f"Found {len(res.detected_signals)} rule-based signal(s): {', '.join(sorted({s.signal for s in res.detected_signals})) or 'none'}.")
         status = "done" if ok else "stopped"
         art = self._save(1, status, f"domain {self.domain}", res.model_dump(mode="json"), reasoning if ok else "No page could be fetched. " + reasoning)

@@ -107,8 +107,10 @@ class EvidenceCorpus:
             if s.kind == "search":
                 searches.setdefault(s.query, []).append(s)
         parts = ["<website_content>"]
+        seen: set[str] = set()
         for p in pages:
-            parts.append(f'<page url="{p.url}" title="{_attr(p.title)}">\n{p.text[:max_chars_per_source]}\n</page>')
+            text = drop_repeated_lines(p.text[:max_chars_per_source], seen)
+            parts.append(f'<page url="{p.url}" title="{_attr(p.title)}">\n{text}\n</page>')
         parts.append("</website_content>")
         if searches:
             parts.append("<search_results>")
@@ -132,6 +134,23 @@ class EvidenceCorpus:
             src = Source(**item)
             corpus.sources[canonical_url(src.url)] = src
         return corpus
+
+
+def drop_repeated_lines(text: str, seen: set[str]) -> str:
+    """Remove lines already shown on an earlier page (menus, footers, cookie banners, repeated CTAs).
+
+    Only the PROMPT is shortened: evidence is still verified against each page's full text, so a quote
+    from a dropped line still counts. `seen` is shared across pages and updated in place.
+    """
+    kept = []
+    for line in text.splitlines():
+        key = normalise_text(line)
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        kept.append(line)
+    return "\n".join(kept)
 
 
 def _attr(text: str) -> str:

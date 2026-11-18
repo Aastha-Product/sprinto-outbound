@@ -40,4 +40,9 @@ Hard-disqualifier questions (ids starting with DQ_) are answered the same way: `
 {{signals}}
 </detected_signals>
 
+## Pages that exist but could NOT be read
+Their content is MISSING, not empty (JavaScript-only page, bot protection, robots.txt, login). Never answer an
+`absence` rule `yes`, or say a certification is missing, because of these pages: we simply don't know.
+{{unreadable}}
+
 Return JSON only: `signals` (one per rule id above) and a 1–2 sentence `summary`.

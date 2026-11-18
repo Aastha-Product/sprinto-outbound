@@ -13,7 +13,36 @@ from outbound.pipeline import STEP_FILES
 from outbound.storage import Store
 
 SUMMARY_COLUMNS = ["domain", "last_step", "status", "verdict", "score", "disqualifier", "top_reasons", "poc_name", "poc_title",
-                   "email_subject", "email_flagged", "send_status", "llm_calls", "hunter_credits"]
+                   "email_subject", "email_flagged", "send_status", "llm_calls", "hunter_credits", "pages_readable", "pages_unreadable"]
+
+
+def _page_counts(arts: dict) -> tuple[str, str]:
+    pages = ((arts.get("01_scrape") or {}).get("output") or {}).get("pages") or []
+    if not pages:
+        return "", ""
+    readable = [p for p in pages if not p.get("error") and p.get("quality", "ok") == "ok"]
+    return str(len(readable)), str(len(pages) - len(readable))
+
+
+def review_queue(run: dict[str, dict[str, dict]]) -> list[str]:
+    """Domains a person should look at: the designed hand-off when the system can't decide on its own."""
+    items = []
+    for domain, arts in run.items():
+        q = (arts.get("03_qualify") or {}).get("output") or {}
+        draft = (arts.get("06_email") or {}).get("output") or {}
+        scrape = (arts.get("01_scrape") or {})
+        if scrape and scrape.get("status") != "done":
+            items.append(f"- **{domain}**: no page could be read. Check it by hand or skip it.")
+        if q.get("verdict") == "insufficient_data":
+            items.append(f"- **{domain}**: insufficient data after research ({', '.join(q.get('critical_unknowns') or []) or 'see reasoning'}). "
+                         f"A 2-minute manual look decides it.")
+        unconfirmed = [s for s in q.get("signals") or [] if (s.get("detail") or "").startswith("can't confirm:")]
+        if unconfirmed:
+            items.append(f"- **{domain}**: {unconfirmed[0]['detail']}. Gap rules {', '.join(s['rule_id'] for s in unconfirmed)} "
+                         f"scored 0; open that page in a browser to check certifications.")
+        if draft.get("flagged"):
+            items.append(f"- **{domain}**: email draft flagged ({'; '.join(draft.get('problems') or []) or 'see 06_email'}). Not sendable as is.")
+    return items
 
 
 def _last(arts: dict) -> tuple[str, dict]:
@@ -47,6 +76,8 @@ def summary_rows(run: dict[str, dict[str, dict]]) -> list[dict]:
             "send_status": send.get("status", ""),
             "llm_calls": last.get("llm_calls_used", ""),
             "hunter_credits": poc.get("hunter_credits_used", ""),
+            "pages_readable": _page_counts(arts)[0],
+            "pages_unreadable": _page_counts(arts)[1],
         })
     return rows
 
@@ -120,6 +151,8 @@ def decision_report(run_id: str, run: dict[str, dict[str, dict]]) -> str:
     head = [f"# Decision report: run {run_id}", "", "| Domain | Verdict | Score | Top reasons | PoC | Send |", "|---|---|---|---|---|---|"]
     for r in rows:
         head.append(f"| {r['domain']} | {r['verdict'] or r['status']} | {r['score']} | {r['top_reasons'].replace('|', '/') or r['disqualifier']} | {r['poc_name']} {('(' + r['poc_title'] + ')') if r['poc_title'] else ''} | {r['send_status']} |")
+    queue = review_queue(run)
+    head += ["", "## Needs a human", *(queue or ["- Nothing: every domain got a clear decision."])]
     sections = [domain_section(d, arts) for d, arts in run.items()]
     return "\n".join(head) + "\n\n" + "\n\n---\n\n".join(sections) + "\n"
 

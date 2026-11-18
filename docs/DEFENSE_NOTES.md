@@ -71,9 +71,30 @@ same domain twice, max 5/day on the website. The Gmail permission is `gmail.send
 everyone to 20 domains/day and 10 per run, rate-limits each IP, and masks every email address in its responses.
 All of this is tested in `tests/test_guards.py` and `tests/test_app.py`.
 
+### 11. "Your scraper says it worked. How do you know it actually read anything?"
+Because "it returned 200" isn't the test; Python counts. `scrape.assess_page` marks a page `thin` if it has under 50
+readable words (usually drawn by JavaScript after load: View Source ≠ Inspect), and also names Cloudflare walls,
+CAPTCHAs, login forms and HTTP 429. Those pages count as **unknown, never as empty**. That matters for the rules that
+score something *missing*: in my cached scrapes `trust.vanta.com` came back with 3 words, and the trust centers of
+Hevo Data and SpotDraft were blocked by robots.txt. Both of those are Sprinto customers whose trust centers run on
+Sprinto. Before this check, "no SOC 2 found on the pages checked" could have earned +8 for a gap that doesn't exist.
+Now `ICP.md` → *Rules that need a readable trust page* forces those rules to 0 and the report's **Needs a human**
+list says which page to open (`tests/test_silent_failures.py`). A trust page that returns 404 still counts as real
+absence. For thin pages we also read what the HTML already carries for machines (meta description, JSON-LD
+headcount/founding year, `__NEXT_DATA__`), so many "empty" pages still yield facts without a browser.
+
+### 12. "Why a loop and not a fixed pipeline? And where's your Evidence Map?"
+A fixed pipeline decides in advance that the homepage is enough; for a thin homepage it guesses. Here the model fills
+named fields, and **Python** decides whether they're filled (verified quote or not); the loop only runs while a
+critical field is empty, the score is borderline, or the customer check is pending, and it's capped (3 iterations,
+12 LLM calls). At the cap the answer is `insufficient_data` + the "Needs a human" list: a designed hand-off, not a
+failure. The full map (question → source page → "sufficient when" → limit → if unanswered → short-circuit) is in
+`docs/EVIDENCE_MAP.md`, including two places where I deliberately differ from the lecture's example.
+
 ---
 
 **Bonus: "Why Gemini / why not a headless browser / why Neon?"** Gemini: free tier plus built-in Google Search
-grounding for the agent loop. No headless browser: lighter, polite, works on Vercel; the trade-off (JS-heavy sites) is
-covered by web search. Neon: Vercel functions have no permanent disk, so artifacts, the Hunter cache and the send
+grounding for the agent loop. No headless browser: lighter, polite, works on Vercel, and 10–50× cheaper per page;
+the trade-off (JS-heavy sites) is detected (`thin` pages), partly recovered from data embedded in the HTML, and
+otherwise covered by web search or handed to a human. Neon: Vercel functions have no permanent disk, so artifacts, the Hunter cache and the send
 log need a database, and Postgres is the simplest one Vercel connects to.
