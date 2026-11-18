@@ -69,6 +69,19 @@ python scripts\check_setup.py
 ```
 It prints ✅/❌ for each key, the remaining Hunter searches, and whether Gmail is authorised, without printing any secret.
 
+## 9. 🔑 Vercel + Neon (the public website)
+1. https://vercel.com/new → sign in with GitHub → import **`sprinto-outbound`** → **Deploy** (defaults are fine).
+2. In the Vercel project: **Storage → Create Database → Neon** → follow the steps → **Connect** to this project.
+   This adds `DATABASE_URL` automatically. (Optional: copy the same value into your local `.env` so the CLI
+   and the website share results.)
+3. **Settings → Environment Variables**, add (same values as your `.env`):
+   `GEMINI_API_KEY`, `GEMINI_MODEL`, `HUNTER_API_KEY`, `OWNER_EMAIL`, `SENDER_NAME`, `SENDER_TITLE`.
+4. For sending from the website (after step 7 above): open `token.json` in VS Code and copy
+   `client_id` → `GMAIL_CLIENT_ID`, `client_secret` → `GMAIL_CLIENT_SECRET`, `refresh_token` → `GMAIL_REFRESH_TOKEN`.
+   Add `SEND_ENABLED` = `true` only when you're ready.
+5. **Deployments → ⋯ → Redeploy** (variables only apply after a redeploy).
+6. Open `https://<your-project>.vercel.app/api/health`: every value should be `ok` / `configured`.
+
 ## Common problems
 | Symptom | Fix |
 |---|---|

@@ -1,34 +1,314 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sprinto Outbound</title>
-  <style>
-    :root { --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --card: #f5f5f4; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #161616; --fg: #ececec; --muted: #9a9a9a; --card: #222; } }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
-    main { max-width: 720px; margin: 0 auto; padding: 48px 16px; }
-    .card { background: var(--card); border-radius: 10px; padding: 16px; margin-top: 24px; }
-    code, pre { font-family: ui-monospace, monospace; font-size: 14px; }
-    p.muted { color: var(--muted); }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprinto Outbound</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --fg: #1c1917; --muted: #6b6763; --line: #e7e5e4;
+    --accent: #4338ca; --accent-fg: #ffffff; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --chip: #f1f0ef;
+    --ok-bg: #dcfce7; --warn-bg: #fef3c7; --bad-bg: #fee2e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141312; --surface: #1d1c1a; --fg: #ecebe9; --muted: #a29e99; --line: #34312e;
+      --accent: #a5b4fc; --accent-fg: #141312; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --chip: #2a2826;
+      --ok-bg: #14321f; --warn-bg: #3a2a0d; --bad-bg: #3b1515;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  a { color: var(--accent); overflow-wrap: anywhere; }
+  .lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 24px; }
+  .pill { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); } .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+  textarea { width: 100%; min-height: 150px; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; padding: 10px; border-radius: 8px;
+             border: 1px solid var(--line); background: var(--bg); color: var(--fg); resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+  button { font: inherit; font-weight: 600; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent);
+           color: var(--accent-fg); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  select { font: inherit; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); max-width: 100%; }
+  .muted { color: var(--muted); } .small { font-size: 13px; }
+  .error { color: var(--bad); font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
+  .card-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .card-head .domain { font-weight: 700; font-size: 16px; margin-right: auto; overflow-wrap: anywhere; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--chip); }
+  .badge.qualified, .badge.done, .badge.sent { background: var(--ok-bg); color: var(--ok); }
+  .badge.rejected, .badge.error, .badge.blocked { background: var(--bad-bg); color: var(--bad); }
+  .badge.insufficient_data, .badge.stopped, .badge.dry_run, .badge.skipped, .badge.running { background: var(--warn-bg); color: var(--warn); }
+  .steps { display: flex; gap: 4px; padding: 10px 16px; flex-wrap: wrap; }
+  .step { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--chip); color: var(--muted); }
+  .step.done { background: var(--ok-bg); color: var(--ok); } .step.error { background: var(--bad-bg); color: var(--bad); }
+  .step.stopped { background: var(--warn-bg); color: var(--warn); } .step.running { outline: 2px solid var(--accent); color: var(--fg); }
+  details { border-top: 1px solid var(--line); }
+  details > summary { cursor: pointer; padding: 10px 16px; font-weight: 600; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before { content: "▸ "; color: var(--muted); } details[open] > summary::before { content: "▾ "; }
+  .body { padding: 0 16px 14px; }
+  .reason { margin: 0 0 10px; }
+  ul.ev { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; }
+  ul.ev li { margin-bottom: 4px; }
+  q { font-style: italic; color: var(--muted); }
+  pre.email { white-space: pre-wrap; font: 14px/1.6 ui-sans-serif, system-ui, sans-serif; background: var(--bg); border: 1px solid var(--line);
+              border-radius: 8px; padding: 12px 14px; margin: 8px 0; }
+  .kv { display: grid; grid-template-columns: minmax(120px, max-content) 1fr; gap: 4px 14px; font-size: 13.5px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  footer { margin-top: 40px; font-size: 13px; color: var(--muted); }
+  @media (max-width: 560px) { .kv { grid-template-columns: 1fr; } .kv dd { margin-bottom: 6px; } }
+</style>
 </head>
 <body>
 <main>
   <h1>Sprinto Outbound</h1>
-  <p>Automated cold-outreach pipeline: scrape → extract → qualify (agent loop) → find contact → pain points → draft → send.</p>
-  <p class="muted">MESA School of Business, Term 2, AI Case 2. The full interface arrives in a later build phase.</p>
-  <div class="card">
-    <strong>Service status</strong>
-    <pre id="health">checking…</pre>
-  </div>
+  <p class="lede">Paste company domains. The pipeline scrapes each site, qualifies it against Sprinto's ICP (with an agent loop that
+    researches open questions), finds the right decision-maker, picks two evidence-backed pain points and drafts a cold email.
+    Every decision links to its source. Emails only ever go to the project owner's own inbox.</p>
+  <div class="pills" id="pills"><span class="pill">checking services…</span></div>
+
+  <section class="panel">
+    <h2>New run</h2>
+    <textarea id="domains" spellcheck="false" aria-label="Domains, one per line"></textarea>
+    <div class="row">
+      <button id="runBtn">Run pipeline (dry-run)</button>
+      <span class="muted small" id="limits"></span>
+    </div>
+    <p id="runError" class="error" hidden></p>
+  </section>
+
+  <section class="panel">
+    <h2>Past runs</h2>
+    <div class="row" style="margin-top:0">
+      <select id="pastRuns" aria-label="Past runs"><option value="">Loading…</option></select>
+      <button class="secondary" id="loadBtn">Open</button>
+    </div>
+  </section>
+
+  <section id="results" hidden>
+    <div class="panel">
+      <div class="row" style="margin-top:0; justify-content: space-between">
+        <h2 style="margin:0">Run <span id="runId"></span></h2>
+        <a id="reportLink" target="_blank" rel="noopener">Open decision report</a>
+      </div>
+      <div class="tablewrap" style="margin-top:12px"><table id="summary"></table></div>
+    </div>
+    <div id="cards"></div>
+  </section>
+
+  <footer>MESA School of Business · Term 2 · AI Case 2 · Code: <a href="https://github.com/anshullmishra-png/sprinto-outbound" target="_blank" rel="noopener">GitHub</a></footer>
 </main>
+
 <script>
-  fetch("/api/health")
-    .then(r => r.json())
-    .then(d => { document.getElementById("health").textContent = JSON.stringify(d, null, 2); })
-    .catch(() => { document.getElementById("health").textContent = "could not reach /api/health"; });
+const STEPS = {1: "Scrape", 2: "Extract", 3: "Qualify", 4: "Find PoC", 5: "Pain points", 6: "Draft email", 7: "Send"};
+const FILES = {1: "01_scrape", 2: "02_extract", 3: "03_qualify", 4: "04_poc", 5: "05_pain", 6: "06_email", 7: "07_send"};
+let state = { runId: null, domains: [], artifacts: {}, running: {} };
+
+// ---------- tiny DOM helper: all text goes in as textContent (scraped content is untrusted)
+function el(tag, attrs = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) n.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  return n;
+}
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : null;
+const link = (u, label) => safeUrl(u) ? el("a", {href: u, target: "_blank", rel: "noopener noreferrer"}, label || u) : el("code", {}, u || "");
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
+  const isJson = (res.headers.get("content-type") || "").includes("json");
+  const data = isJson ? await res.json() : await res.text();
+  if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+  return data;
+}
+
+// ---------- status + past runs
+async function loadHealth() {
+  const pills = document.getElementById("pills");
+  try {
+    const h = await api("/api/health");
+    const items = [["Database", h.database === "ok"], ["Gemini", h.gemini === "configured"], ["Hunter", h.hunter === "configured"],
+                   ["Gmail", h.gmail === "configured"], [h.send_enabled ? "Sending on" : "Sending off", h.send_enabled]];
+    pills.replaceChildren(...items.map(([label, ok]) => el("span", {class: "pill " + (ok ? "ok" : "bad")}, label)));
+    document.getElementById("limits").textContent =
+      `Up to ${h.limits.domains_per_run} domains per run · ${h.limits.runs_per_day} domains/day for everyone · emails go to the owner's inbox only`;
+  } catch (e) { pills.replaceChildren(el("span", {class: "pill bad"}, "Server unreachable")); }
+}
+
+async function loadPastRuns() {
+  const sel = document.getElementById("pastRuns");
+  try {
+    const runs = await api("/api/runs");
+    sel.replaceChildren(...(runs.length ? runs.map(r => el("option", {value: r.run_id}, `${r.run_id} · ${r.domains} domain(s) · ${r.qualified} qualified`))
+                                         : [el("option", {value: ""}, "No runs yet")]));
+  } catch (e) { sel.replaceChildren(el("option", {value: ""}, "Could not load runs")); }
+}
+
+// ---------- running
+async function startRun() {
+  const btn = document.getElementById("runBtn"), err = document.getElementById("runError");
+  err.hidden = true; btn.disabled = true;
+  try {
+    const run = await api("/api/runs", {method: "POST", body: JSON.stringify({domains: document.getElementById("domains").value})});
+    state = { runId: run.run_id, domains: run.domains, artifacts: Object.fromEntries(run.domains.map(d => [d, {}])), running: {} };
+    render();
+    for (const d of run.domains) await runDomain(d);
+    loadPastRuns();
+  } catch (e) { err.textContent = e.message; err.hidden = false; }
+  btn.disabled = false;
+}
+
+async function runDomain(domain) {
+  for (let step = 1; step <= 6; step++) {
+    state.running[domain] = step; renderCard(domain); renderSummary();
+    let out;
+    try { out = await api(`/api/runs/${state.runId}/step`, {method: "POST", body: JSON.stringify({domain, step})}); }
+    catch (e) { out = {status: "error", message: e.message, artifact: {status: "error", reasoning: e.message}}; }
+    if (out.artifact) state.artifacts[domain][FILES[step]] = out.artifact;
+    delete state.running[domain]; renderCard(domain); renderSummary();
+    if (out.status !== "done") break;
+  }
+}
+
+async function sendEmail(domain, btn) {
+  btn.disabled = true;
+  try {
+    const out = await api(`/api/runs/${state.runId}/send`, {method: "POST", body: JSON.stringify({domain})});
+    if (out.artifact) state.artifacts[domain]["07_send"] = out.artifact;
+  } catch (e) { state.artifacts[domain]["07_send"] = {status: "error", output: {status: "error", reason: e.message}}; }
+  renderCard(domain); renderSummary();
+}
+
+async function openRun(runId) {
+  if (!runId) return;
+  const run = await api(`/api/runs/${runId}`);
+  state = { runId, domains: run.domains, artifacts: run.artifacts, running: {} };
+  render();
+}
+
+// ---------- rendering
+function render() {
+  document.getElementById("results").hidden = false;
+  document.getElementById("runId").textContent = state.runId;
+  const rl = document.getElementById("reportLink"); rl.href = `/api/runs/${state.runId}/report`;
+  renderSummary();
+  document.getElementById("cards").replaceChildren(...state.domains.map(d => el("div", {id: "card-" + d})));
+  state.domains.forEach(renderCard);
+}
+
+function q3(d) { return ((state.artifacts[d] || {})["03_qualify"] || {}).output || null; }
+
+function renderSummary() {
+  const head = el("tr", {}, ...["Domain", "Verdict", "Score", "Top reasons", "Contact", "Email"].map(h => el("th", {}, h)));
+  const rows = state.domains.map(d => {
+    const a = state.artifacts[d] || {}, q = q3(d), poc = (a["04_poc"] || {}).output, mail = (a["06_email"] || {}).output;
+    const running = state.running[d];
+    const verdict = running ? `running: ${STEPS[running]}` : (q ? q.verdict : (lastArtifact(d) || {}).status || "waiting");
+    const cls = running ? "running" : (q ? q.verdict : (lastArtifact(d) || {}).status || "");
+    return el("tr", {},
+      el("td", {}, d), el("td", {}, el("span", {class: "badge " + cls}, verdict.replace("_", " "))),
+      el("td", {class: "num"}, q ? String(q.score) : ""),
+      el("td", {class: "small"}, q ? (q.top_reasons || []).join(" · ") : ""),
+      el("td", {}, poc && poc.chosen ? `${poc.chosen.first_name || ""} ${poc.chosen.last_name || ""} (${poc.chosen.position || ""})` : ""),
+      el("td", {}, mail ? mail.draft.subject + (mail.flagged ? " ⚠" : "") : ""));
+  });
+  document.getElementById("summary").replaceChildren(el("thead", {}, head), el("tbody", {}, ...rows));
+}
+
+function lastArtifact(d) {
+  const a = state.artifacts[d] || {};
+  for (let i = 7; i >= 1; i--) if (a[FILES[i]]) return a[FILES[i]];
+  return null;
+}
+
+function evidenceList(evs, limit = 8) {
+  if (!evs || !evs.length) return null;
+  return el("ul", {class: "ev"}, ...evs.slice(0, limit).map(e => el("li", {}, e.claim + " ", el("q", {}, e.quote), " ", link(e.source_url, "source"))));
+}
+
+function section(title, art, buildBody, open = false) {
+  if (!art) return null;
+  const body = el("div", {class: "body"});
+  if (art.reasoning) body.append(el("p", {class: "reason"}, art.reasoning));
+  if (art.output) { const extra = buildBody(art.output, art); if (extra) body.append(...[].concat(extra).filter(Boolean)); }
+  return el("details", open ? {open: ""} : {}, el("summary", {}, `${title} `, el("span", {class: "badge " + art.status}, art.status)), body);
+}
+
+function renderCard(d) {
+  const holder = document.getElementById("card-" + d); if (!holder) return;
+  const a = state.artifacts[d] || {}, q = q3(d), running = state.running[d];
+  const head = el("div", {class: "card-head"}, el("span", {class: "domain"}, d),
+    q ? el("span", {class: "badge " + q.verdict}, q.verdict.replace("_", " ")) : null,
+    q ? el("span", {class: "muted small"}, `score ${q.score}/100`) : null);
+  const steps = el("div", {class: "steps"}, ...Object.entries(STEPS).map(([n, name]) => {
+    const art = a[FILES[n]]; const cls = running == n ? "running" : (art ? art.status : "");
+    return el("span", {class: "step " + cls}, `${n} ${name}`);
+  }));
+
+  const parts = [
+    section("1 · Scrape", a["01_scrape"], o => [
+      el("ul", {class: "ev"}, ...(o.pages || []).map(p => el("li", {}, link(p.url), p.error ? el("span", {class: "muted"}, ` (${p.error})`) : el("span", {class: "muted"}, ` · ${p.text.length} chars`)))),
+      (o.detected_signals || []).length ? el("p", {class: "small muted"}, "Signals: " + [...new Set(o.detected_signals.map(s => s.signal))].join(", ")) : null]),
+    section("2 · Company profile", a["02_extract"], o => {
+      const dl = el("dl", {class: "kv"});
+      for (const [k, v] of Object.entries(o)) {
+        if (k === "evidence" || k === "unknowns" || v === null || (Array.isArray(v) && !v.length)) continue;
+        dl.append(el("dt", {}, k.replaceAll("_", " ")), el("dd", {}, Array.isArray(v) ? v.join(", ") : String(v)));
+      }
+      return [dl, evidenceList(o.evidence, 12)];
+    }),
+    section("3 · Qualification", a["03_qualify"], o => {
+      const lines = (o.score_breakdown || []).filter(l => l.points !== 0 || !["unknown", "no"].includes(l.reason));
+      const table = lines.length ? el("div", {class: "tablewrap"}, el("table", {},
+        el("thead", {}, el("tr", {}, ...["Rule", "Row", "Points", "Why"].map(h => el("th", {}, h)))),
+        el("tbody", {}, ...lines.map(l => el("tr", {}, el("td", {}, l.rule_id), el("td", {class: "small"}, l.rubric_row),
+          el("td", {class: "num"}, `${l.points}/${l.max_points}`), el("td", {class: "small"}, l.reason)))))) : null;
+      const its = (o.iterations || []).length ? el("div", {}, el("p", {class: "reason"}, el("strong", {}, "Agent loop")),
+        el("ol", {class: "ev"}, ...o.iterations.map(i => el("li", {}, `${i.action.action}(${i.action.argument}): ${i.action.why} → ${i.learned} (score ${i.score_before} → ${i.score_after})`)))) : null;
+      return [table, evidenceList(o.evidence, 12), its];
+    }, true),
+    section("4 · Point of contact", a["04_poc"], o => o.chosen ? el("dl", {class: "kv"},
+      el("dt", {}, "Chosen"), el("dd", {}, `${o.chosen.first_name} ${o.chosen.last_name || ""}, ${o.chosen.position || ""} (${o.chosen.email}, confidence ${o.chosen.confidence ?? "?"})`),
+      el("dt", {}, "Alternatives"), el("dd", {}, (o.alternatives || []).map(c => `${c.first_name || "?"} (${c.position || "?"})`).join(" · ") || "none"),
+      el("dt", {}, "Hunter credits"), el("dd", {}, String(o.hunter_credits_used))) : null),
+    section("5 · Pain points", a["05_pain"], o => el("div", {}, ...(o || []).map(p => el("div", {},
+      el("p", {class: "reason"}, el("strong", {}, p.title), " · " + p.why_this_person), evidenceList(p.evidence, 2))))),
+    section("6 · Email draft", a["06_email"], o => {
+      const out = [el("p", {class: "small muted"}, "Subject: ", el("strong", {}, o.draft.subject)), el("pre", {class: "email"}, o.full_body)];
+      if (o.flagged) out.push(el("p", {class: "error"}, "Flagged, will not be sent: " + o.problems.join("; ")));
+      else if (!a["07_send"] || a["07_send"].output?.status !== "sent") {
+        const b = el("button", {}, "Send to owner's inbox"); b.onclick = () => sendEmail(d, b);
+        out.push(el("div", {class: "row"}, b, el("span", {class: "muted small"}, "Subject gets a [TEST → contact] prefix. Needs SEND_ENABLED on the server.")));
+      }
+      return out;
+    }, true),
+    section("7 · Send", a["07_send"], o => el("p", {class: "small"}, el("span", {class: "badge " + o.status}, o.status), " " + (o.subject || ""))),
+  ];
+  holder.replaceChildren(el("div", {class: "card"}, head, steps, ...parts.filter(Boolean)));
+}
+
+// ---------- boot
+document.getElementById("runBtn").onclick = startRun;
+document.getElementById("loadBtn").onclick = () => openRun(document.getElementById("pastRuns").value).catch(e => {
+  const err = document.getElementById("runError"); err.textContent = e.message; err.hidden = false;
+});
+api("/api/sample-domains").then(t => { document.getElementById("domains").value = t; }).catch(() => {});
+loadHealth(); loadPastRuns();
 </script>
 </body>
 </html>

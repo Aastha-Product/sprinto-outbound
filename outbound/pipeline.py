@@ -243,9 +243,11 @@ def run_domain(run_id: str, domain: str, steps: list[int], settings: Settings, s
 
 
 def find_latest_run(store: Store, domain: str, needs_step: int) -> str | None:
-    """Most recent run that has a 'done' artifact for `needs_step` for this domain (to continue from)."""
+    """Most recent run that has an artifact for `needs_step` for this domain (to continue from).
+
+    If that step ended as 'stopped' (e.g. the company was rejected), the next step will say so clearly.
+    """
     for run_id in store.list_runs(limit=50):
-        art = store.load_artifact(run_id, domain, STEP_FILES[needs_step])
-        if art and art.get("status") == "done":
+        if store.load_artifact(run_id, domain, STEP_FILES[needs_step]):
             return run_id
     return None
