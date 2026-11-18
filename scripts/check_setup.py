@@ -71,6 +71,15 @@ def main() -> int:
         except Exception as exc:
             line(BAD, "Hunter /v2/account", f"{type(exc).__name__}: {str(exc)[:150]}")
 
+    print("\n── Neon database")
+    from outbound.storage import ping_database
+
+    db = ping_database(s)
+    if db == "not configured":
+        line(WARN, "DATABASE_URL", "not set: results are saved as files in runs\\ (fine locally)")
+    else:
+        line(OK if db == "ok" else BAD, "DATABASE_URL", f"connection {db}")
+
     print("\n── Gmail")
     creds = PROJECT_ROOT / s.gmail_credentials_file
     token = PROJECT_ROOT / s.gmail_token_file

@@ -15,13 +15,19 @@ def setup_logging(level: int = logging.INFO) -> None:
             stream.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError):
             pass
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[RichHandler(rich_tracebacks=True, show_path=False)],
-        force=True,
-    )
-    # httpx logs every request URL at INFO level. Keep it quiet so nothing sensitive is ever printed.
-    for noisy in ("httpx", "httpcore", "google_genai", "urllib3", "googleapiclient"):
+    handler = RichHandler(rich_tracebacks=True, show_path=False)
+    handler.addFilter(_QuietLibraries())
+    logging.basicConfig(level=level, format="%(message)s", datefmt="[%X]", handlers=[handler], force=True)
+    for noisy in NOISY_LOGGERS:
         logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+# httpx logs every request URL at INFO level. Some libraries turn that back on when they load, so the
+# handler itself also drops their below-WARNING messages: request URLs are never printed.
+NOISY_LOGGERS = ("httpx", "httpx2", "httpcore", "httpcore2", "google_genai", "google.genai", "urllib3", "googleapiclient")
+
+
+class _QuietLibraries(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        noisy = any(record.name == n or record.name.startswith(n + ".") for n in NOISY_LOGGERS)
+        return not noisy or record.levelno >= logging.WARNING
