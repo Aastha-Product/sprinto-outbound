@@ -25,10 +25,16 @@ decided yet. Choose the ONE next action that is most likely to resolve the most 
 ## Pages already fetched
 {{fetched}}
 
+## Pages on this site you can still fetch (found in its links; about/company/careers/press pages often state
+## headcount, funding rounds and investors)
+{{candidates}}
+
 ## Searches already run
 {{searches}}
 
 Prefer, in order: critical unknowns, then the unanswered questions worth the most points.
-Funding, headcount and hiring are usually found faster with `web_search` than on the website.
+Funding, headcount and hiring are usually found faster with `web_search` than on the website (when available);
+otherwise try the company's about / careers / press / news pages.
+Only choose `decide` if no listed page or search is likely to answer the critical unknowns.
 
 Return JSON only.

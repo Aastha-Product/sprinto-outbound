@@ -212,6 +212,22 @@ def test_search_quota_error_turns_search_off_for_the_run(monkeypatch, ctx):
     assert blocked.action == "decide"
 
 
+def test_giving_up_with_critical_unknowns_fetches_a_likely_page(ctx):
+    ctx.scrape.candidate_links = ["https://acme.io/blog/post", "https://acme.io/company/about-us"]
+    stop = AgentAction(action="decide", argument="", why="nothing else to do")
+    action = q.fallback_if_giving_up(stop, ctx, ["Stage fit: Series A–C"])
+    assert action.action == "fetch_page" and action.argument == "https://acme.io/company/about-us"
+    assert "Python fallback" in action.why
+    assert q.fallback_if_giving_up(stop, ctx, []).action == "decide"  # nothing critical missing: allowed to stop
+
+
+def test_fetchable_pages_skips_fetched_and_adds_fallbacks(ctx):
+    ctx.scrape.candidate_links = ["https://acme.io/", "https://acme.io/press"]
+    pages = ctx.fetchable_pages()
+    assert "https://acme.io/" not in pages  # already fetched
+    assert pages[0] == "https://acme.io/press" and "https://acme.io/careers" in pages
+
+
 def test_invalid_actions_become_decide(ctx):
     bad = q.validate_action(AgentAction(action="fetch_page", argument="https://evil.com/x", why="?"), ctx)
     assert bad.action == "decide"

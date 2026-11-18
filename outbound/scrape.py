@@ -36,6 +36,10 @@ LINK_KEYWORDS = [
     "pricing", "security", "trust", "compliance", "customers", "about",
     "careers", "jobs", "enterprise", "integrations", "privacy",
 ]
+# Extra keywords for pages the agent loop may fetch later: these often state headcount or funding.
+CANDIDATE_KEYWORDS = LINK_KEYWORDS + ["company", "team", "press", "news", "newsroom", "media", "funding", "investors", "announc", "leadership"]
+# Common paths to try when a site's links weren't saved (older cached scrapes) or don't match keywords.
+FALLBACK_PATHS = ["/about", "/about-us", "/company", "/careers", "/press", "/newsroom", "/news"]
 SKIP_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".zip", ".mp4", ".mp3", ".xml", ".json", ".css", ".js")
 SCRAPE_CACHE_DAYS = 7
 DELAY_SECONDS = 1.0
@@ -140,6 +144,28 @@ def rank_links(html: str, page_url: str, domain: str, limit: int) -> list[str]:
         if options:
             chosen.append(options[0])
     return chosen
+
+
+def candidate_links(html: str, page_url: str, domain: str, exclude: set[str], limit: int = 20) -> list[str]:
+    """All same-site links matching CANDIDATE_KEYWORDS (not already fetched), most useful first."""
+    soup = BeautifulSoup(html, "html.parser")
+    scored: dict[str, tuple[int, int, int]] = {}
+    for a in soup.find_all("a", href=True):
+        href = a["href"].strip()
+        if href.startswith(("mailto:", "tel:", "javascript:", "#")):
+            continue
+        url = clean_url(urljoin(page_url, href))
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not same_site(url, domain) or url in exclude:
+            continue
+        if parsed.path.lower().endswith(SKIP_EXTENSIONS):
+            continue
+        haystack = parsed.path.lower() + " " + a.get_text(" ", strip=True).lower()
+        ranks = [i for i, kw in enumerate(CANDIDATE_KEYWORDS) if kw in haystack]
+        if ranks:
+            path = parsed.path.rstrip("/")
+            scored[url] = min(scored.get(url, (99, 0, 0)), (min(ranks), path.count("/"), len(path)))
+    return [u for u, _ in sorted(scored.items(), key=lambda kv: kv[1])][:limit]
 
 
 # ---------------------------------------------------------------- cheap signals
@@ -287,6 +313,8 @@ def scrape_domain(domain: str, settings: Settings, store: Store | None = None, f
             for url in rank_links(html, home.url, domain, limit=settings.max_pages_per_domain - 1):
                 page, page_html = fetcher.fetch(url, domain)
                 _record(result, page, page_html, domain)
+            fetched = {clean_url(p.url) for p in result.pages}
+            result.candidate_links = candidate_links(html, home.url, domain, exclude=fetched)
         ok = sum(1 for p in result.pages if not p.error)
         log.info("[%s] scrape: %d page(s) ok, %d failed, %d signal(s)", domain, ok, len(result.pages) - ok, len(result.detected_signals))
     finally:

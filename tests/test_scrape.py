@@ -61,6 +61,16 @@ def test_rank_links_keeps_same_site_keyword_links_one_per_keyword():
     assert not any("other.com" in u or u.endswith(".pdf") for u in links)
 
 
+def test_candidate_links_keeps_unfetched_useful_pages():
+    from outbound.scrape import candidate_links
+
+    html = HOME + '<a href="/press/series-b">We raised our Series B</a><a href="/team">Team</a>'
+    links = candidate_links(html, "https://acme.io/", "acme.io", exclude={"https://acme.io/pricing"})
+    assert "https://acme.io/pricing" not in links
+    assert "https://acme.io/press/series-b" in links and "https://acme.io/team" in links
+    assert not any("other.com" in u for u in links)
+
+
 def test_detect_signals_finds_competitor_and_mentions():
     signals = {s.signal: s for s in detect_signals(HOME, "https://acme.io/", "acme.io")}
     assert "competitor_link:vanta.com" in signals

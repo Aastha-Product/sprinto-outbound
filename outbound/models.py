@@ -66,6 +66,7 @@ class ScrapeResult(BaseModel):
     pages: list[PageContent] = []
     skipped_by_robots: list[str] = []
     detected_signals: list[DetectedSignal] = []
+    candidate_links: list[str] = []  # useful same-site pages found but not fetched (the agent loop can fetch them)
 
 
 # ---------------------------------------------------------------- step 2: extract

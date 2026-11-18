@@ -33,7 +33,9 @@ from outbound.models import (
     Signal,
     SignalReport,
 )
-from outbound.scrape import Fetcher, fetch_extra_page, same_site
+from urllib.parse import urlparse
+
+from outbound.scrape import FALLBACK_PATHS, Fetcher, clean_url, fetch_extra_page, same_site
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +59,23 @@ class QualifyContext:
     @property
     def company(self) -> str:
         return self.profile.name or self.domain
+
+    def fetchable_pages(self) -> list[str]:
+        """Same-site pages not fetched yet: links found by the scraper, then common fallback paths."""
+        done = {clean_url(p.url) for p in self.scrape.pages} | {clean_url(u) for u in self.extra_pages}
+        home = next((p.url for p in self.scrape.pages if not p.error), f"https://{self.domain}/")
+        root = f"{urlparse(home).scheme}://{urlparse(home).netloc}"
+        urls = list(self.scrape.candidate_links) + [root + path for path in FALLBACK_PATHS]
+        out: list[str] = []
+        for u in urls:
+            cu = clean_url(u)
+            if cu not in done and cu not in out:
+                out.append(cu)
+        return out
+
+
+# Pages most likely to state headcount / funding (used by the Python fallback below).
+STAGE_PAGE_HINTS = ("about", "company", "team", "careers", "jobs", "press", "news", "funding", "investors", "announc")
 
 
 # ---------------------------------------------------------------- hard disqualifiers (Python)
@@ -243,11 +262,28 @@ def choose_action(ctx: QualifyContext, signals: list[Signal], score: int, unknow
             "fetched": "\n".join(f"- {u}" for u in fetched) or "(none)",
             "searches": "\n".join(f"- {q}" for q in ctx.searches) or "(none)",
             "search_note": "" if llm.search_available() else
-            "IMPORTANT: `web_search` is NOT available right now. Choose `fetch_page` (e.g. /about, /careers, /security, /trust, /customers) or `decide`.",
+            "IMPORTANT: `web_search` is NOT available right now. Use `fetch_page` with one of the pages listed below.",
+            "candidates": "\n".join(f"- {u}" for u in ctx.fetchable_pages()[:20]) or "(none left)",
         },
         AgentAction,
     )
-    return validate_action(action, ctx)
+    return fallback_if_giving_up(validate_action(action, ctx), ctx, unknowns)
+
+
+def fallback_if_giving_up(action: AgentAction, ctx: QualifyContext, unknowns: list[str]) -> AgentAction:
+    """Fixed rule: don't stop while a critical fact is unknown and a likely page (about/careers/press...) is unread.
+
+    Small models tend to give up early. If the LLM picks `decide` in that situation, Python fetches the
+    most promising unread page instead, and says so in `why`.
+    """
+    if action.action != "decide" or not unknowns:
+        return action
+    likely = [u for u in ctx.fetchable_pages() if any(h in urlparse(u).path.lower() for h in STAGE_PAGE_HINTS)]
+    if not likely:
+        return action
+    return AgentAction(action="fetch_page", argument=likely[0],
+                       why=f"Python fallback: the LLM chose to stop, but {', '.join(unknowns)} is still unknown and "
+                           f"{likely[0]} has not been read yet (LLM's reason: {action.why})")
 
 
 def validate_action(action: AgentAction, ctx: QualifyContext) -> AgentAction:
@@ -319,7 +355,8 @@ def qualify(ctx: QualifyContext) -> QualificationResult:
         if len(iterations) >= ctx.settings.max_agent_iterations:
             log.info("[%s] agent loop: reached MAX_AGENT_ITERATIONS", ctx.domain)
             break
-        if llm.calls_left() < CALLS_PER_ITERATION + RESERVED_CALLS:
+        per_iteration = CALLS_PER_ITERATION if llm.search_available() else CALLS_PER_ITERATION - 1  # no search call
+        if llm.calls_left() < per_iteration + RESERVED_CALLS:
             log.info("[%s] agent loop: stopping, LLM budget low (%d left)", ctx.domain, llm.calls_left())
             break
 
