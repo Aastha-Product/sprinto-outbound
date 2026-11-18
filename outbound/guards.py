@@ -63,6 +63,8 @@ def validate_draft(draft: EmailDraft, first_name: str, evidence_urls: list[str])
     first_line = next((ln.strip() for ln in body.splitlines() if ln.strip()), "")
     if not first_name or not re.match(rf"^(hi|hello|hey)?\s*{re.escape(first_name)}\b", first_line, re.I):
         problems.append(f"first line must greet the person by first name ('Hi {first_name},')")
+    elif not re.fullmatch(rf"(hi|hello|hey)?\s*{re.escape(first_name)}\s*[,!]?", first_line, re.I):
+        problems.append(f"put the greeting 'Hi {first_name},' on its own line, then a blank line")
 
     text = f"{subject}\n{body}".lower()
     for phrase in BANNED_PHRASES:

@@ -10,7 +10,8 @@ from outbound.models import AgentAction, Citation, CompanyProfile, DetectedSigna
 
 ICP = load_icp()
 HOME = "https://acme.io/"
-HOME_TEXT = "Acme Cloud automates approval workflows for enterprise finance teams. Book a demo. Enterprise plan with SAML SSO."
+HOME_TEXT = ("Acme Cloud automates approval workflows for enterprise finance teams. Book a demo. Enterprise plan with SAML SSO. "
+             "We raised our Series B in March 2026.")
 
 
 def ev(quote="Enterprise plan with SAML SSO", url=HOME) -> Evidence:
@@ -160,8 +161,9 @@ def install_fake_llm(monkeypatch, signal_batches, actions=(), search=("", [])):
 
 
 def strong_signals():
-    ids = ["ENT_PLAN", "ENT_DEMO", "ENT_LOGOS", "ENT_SSO", "DATA_INTEGRATIONS", "DATA_SENSITIVE", "GAP_IN_PROGRESS", "STAGE_FUNDING", "STAGE_SIZE", "GEO_US"]
-    return [yes(i) for i in ids] + [Signal(rule_id="DQ_SPRINTO_CUSTOMER", value="no")]
+    ids = ["ENT_PLAN", "ENT_DEMO", "ENT_LOGOS", "ENT_SSO", "DATA_INTEGRATIONS", "DATA_SENSITIVE", "GAP_IN_PROGRESS", "STAGE_SIZE", "GEO_US"]
+    return ([yes(i) for i in ids] + [yes("STAGE_FUNDING", "We raised our Series B in March 2026")]
+            + [Signal(rule_id="DQ_SPRINTO_CUSTOMER", value="no")])
 
 
 def test_qualified_company_still_gets_sprinto_customer_check(monkeypatch, ctx):
@@ -210,6 +212,25 @@ def test_search_quota_error_turns_search_off_for_the_run(monkeypatch, ctx):
     assert llm.research_with_search("acme hiring") == ("", []) and len(calls) == 1  # not even tried again
     blocked = q.validate_action(AgentAction(action="web_search", argument="acme SOC 2", why="?"), ctx)
     assert blocked.action == "decide"
+
+
+@pytest.mark.parametrize("quote, value", [
+    ("In August 2025, Attio announced a $52 million Series B funding round.", "yes"),   # 15 months
+    ("Testsigma raised an $8.2 million Series A funding round announced on June 5/6, 2024.", "no"),  # 29 months
+    ("GoComet closed a $7 million Series A funding round announced on February 9, 2022.", "no"),
+    ("Raised a Series B from top investors.", "unknown"),  # no date: window can't be checked
+    ("Series A in 2025", "yes"),  # bare year read as December 2025
+])
+def test_funding_window_is_checked_in_python(quote, value):
+    from datetime import date
+
+    sig = Signal(rule_id="STAGE_FUNDING", value="yes", detail="", evidence=[ev(quote)])
+    assert q.apply_funding_window(sig, 24, today=date(2026, 11, 19)).value == value
+
+
+def test_funding_window_leaves_no_and_unknown_alone():
+    sig = Signal(rule_id="STAGE_FUNDING", value="no", evidence=[ev("Series A in 2025")])
+    assert q.apply_funding_window(sig, 24).value == "no"
 
 
 def test_giving_up_with_critical_unknowns_fetches_careers_first(ctx):

@@ -10,9 +10,13 @@ policies, and audit readiness, so engineers don't lose weeks to audits.
 
 ## Rules (an automatic checker rejects drafts that break them)
 - Body ≤ {{max_words}} words. Do NOT write a signature or sign-off; it is added automatically.
-- Subject ≤ {{max_subject_words}} words, lowercase-friendly, specific, no clickbait, no emojis.
-- First line: "Hi {{first_name}}," then the hook in the very next sentence: one specific, verifiable observation
-  taken from a hook candidate (e.g. their new enterprise plan, a security job post, "SOC 2 in progress").
+- Subject ≤ {{max_subject_words}} words, specific, no clickbait, no emojis. Keep acronyms as written (SOC 2, ISO 27001).
+- The body's first line is ONLY "Hi {{first_name}}," on its own, then a blank line.
+- The next sentence is the hook: one specific, verifiable observation taken from a hook candidate. Pick the most
+  timely and compliance-relevant one, in this order of preference: (1) a recent funding round or growth milestone,
+  (2) their compliance status ("SOC 2 in progress", only one framework so far, a trust center), (3) security reviews
+  or questionnaires their customers run, (4) a security/compliance job post, (5) enterprise features such as SSO or
+  audit logs. Avoid generic product or plan descriptions as the hook.
 - Then ONE pain point, framed as a question or an observation, tied to their role.
 - One sentence on how Sprinto helps (no metrics, no customer names, no claims you can't back up).
 - End with ONE low-friction call to action, e.g. "Worth a 15-minute chat next week?"

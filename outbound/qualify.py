@@ -17,6 +17,8 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
+from datetime import date
+from urllib.parse import urlparse
 
 from outbound import llm
 from outbound.config import Settings
@@ -34,8 +36,6 @@ from outbound.models import (
     Signal,
     SignalReport,
 )
-from urllib.parse import urlparse
-
 from outbound.scrape import FALLBACK_PATHS, Fetcher, clean_url, fetch_extra_page, same_site
 
 log = logging.getLogger(__name__)
@@ -236,6 +236,40 @@ def extract_signals(ctx: QualifyContext) -> tuple[list[Signal], str]:
     return clean_signals(report.signals, ctx), report.summary
 
 
+MONTHS = {m: i + 1 for i, m in enumerate(("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"))}
+
+
+def latest_round_date(texts: list[str]) -> tuple[int, int] | None:
+    """Newest (year, month) mentioned in the texts. 'June 2024' -> (2024, 6); a bare '2024' -> (2024, 12), the most
+    favourable reading for the company. None if no date is mentioned."""
+    found: list[tuple[int, int]] = []
+    for text in texts:
+        low = text.lower()
+        for mon, year in re.findall(r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(?:\d{1,2}(?:[/-]\d{1,2})?(?:st|nd|rd|th)?,?\s+)?((?:19|20)\d{2})\b", low):
+            found.append((int(year), MONTHS[mon]))
+        if not found:
+            found += [(int(y), 12) for y in re.findall(r"\b((?:19|20)\d{2})\b", low)]
+    return max(found) if found else None
+
+
+def apply_funding_window(sig: Signal, window_months: int, today: date | None = None) -> Signal:
+    """Fixed rule from ICP.md: a 'yes' only stands if the round's date is visible and within the window."""
+    if sig.value != "yes" or not sig.evidence:
+        return sig
+    texts = [sig.detail] + [e.quote for e in sig.evidence] + [e.claim for e in sig.evidence]
+    when = latest_round_date(texts)
+    today = today or date.today()
+    if when is None:
+        return Signal(rule_id=sig.rule_id, value="unknown", evidence=sig.evidence,
+                      detail=f"round date not shown, so the {window_months}-month window can't be checked ({sig.detail})")
+    age = (today.year - when[0]) * 12 + (today.month - when[1])
+    if age > window_months:
+        return Signal(rule_id=sig.rule_id, value="no", evidence=sig.evidence,
+                      detail=f"round dated {when[1]:02d}/{when[0]} is {age} months old (> {window_months}-month window): {sig.detail}")
+    return Signal(rule_id=sig.rule_id, value="yes", evidence=sig.evidence,
+                  detail=f"{sig.detail} ({age} months ago, inside the {window_months}-month window)")
+
+
 def clean_signals(raw: list[Signal], ctx: QualifyContext) -> list[Signal]:
     """Keep known rule ids, verify evidence, add 'unknown' for missing rules, add Python-detected facts."""
     kinds = {r.id: r.kind for r in ctx.icp.rules} | {d.id: "presence" for d in ctx.icp.disqualifiers}
@@ -255,6 +289,10 @@ def clean_signals(raw: list[Signal], ctx: QualifyContext) -> list[Signal]:
             if sig and sig.value == "yes":
                 by_id[rule_id] = Signal(rule_id=rule_id, value="unknown",
                                         detail=f"can't confirm: {b.url} exists but could not be read ({page_problem(b)})")
+
+    # Deterministic: the funding round must be inside the ICP.md window (the model reads "about 24 months" loosely).
+    if "STAGE_FUNDING" in by_id and "funding_window_months" in ctx.icp.settings:
+        by_id["STAGE_FUNDING"] = apply_funding_window(by_id["STAGE_FUNDING"], ctx.icp.settings["funding_window_months"])
 
     # Deterministic: a competitor link/badge found by the scraper always counts for the penalty rule.
     comp_hits = [d for d in ctx.scrape.detected_signals if d.signal.startswith(("competitor_link:", "competitor_text:"))]

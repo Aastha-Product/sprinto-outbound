@@ -132,7 +132,12 @@ checked and found nothing (e.g., no trust page).
 | qualified_min_score | 60 |
 | borderline_min_score | 40 |
 | late_stage_min_employees | 2000 |
+| funding_window_months | 24 |
 
+- **Funding window (checked in Python, not by the model):** STAGE_FUNDING earns points only if its evidence shows the
+  round's date (month + year, or a year) and that date is within `funding_window_months` of the run date. A round
+  outside the window counts as `no`; a round with no visible date counts as `unknown` (0 points), because the window
+  can't be checked. This keeps the rule identical for every company (e.g. a June 2024 round is 29 months old in Nov 2026).
 - Any disqualifier → `rejected`
 - Score **≥ qualified_min_score** and no critical row fully unknown → `qualified`
 - Score **between borderline_min_score and qualified_min_score**, or a critical row fully unknown, or B2B status unknown →

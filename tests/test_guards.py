@@ -44,6 +44,11 @@ def test_first_name_greeting_required():
     assert problems(body=GOOD_BODY.replace("Hi Alex,", "Alex,")) == []
 
 
+def test_greeting_must_be_on_its_own_line():
+    run_on = GOOD_BODY.replace("Hi Alex,\n\n", "Hi Alex, ")
+    assert any("own line" in p for p in problems(body=run_on))
+
+
 @pytest.mark.parametrize("phrase", ["synergy", "I hope this email finds you well", "revolutionize", "Let's touch base"])
 def test_banned_phrases(phrase):
     assert any("banned phrase" in p for p in problems(body=GOOD_BODY + " " + phrase + "?"))
