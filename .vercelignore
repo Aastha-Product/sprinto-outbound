@@ -1,0 +1,17 @@
+# Never upload secrets or local data to Vercel. Secrets go in Vercel's Environment Variables instead.
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+*.pem
+
+# local-only folders
+.venv/
+runs/
+.cache/
+__pycache__/
+.pytest_cache/
+.claude/
+tests/
+docs/MESA_Case_02.pdf
