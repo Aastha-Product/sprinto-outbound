@@ -58,11 +58,11 @@ Final verdicts (latest runs):
 
 | Domain | Verdict | Score | Why |
 |---|---|---|---|
-| attio.com | **qualified** | 65 | Series B Aug 2025 (15 months, inside the 24-month window), 190+ staff, enterprise tier with SSO/audit logs, US + EU |
-| testsigma.com | rejected | 35 | Series A June 2024 is 29 months old, outside the window (checked in Python, not by the model) |
-| signeasy.com | rejected | 42 | bootstrapped, only a Seed round |
-| gocomet.com | rejected | 29 | Series A Feb 2022, outside the window |
-| hex.tech | rejected | 48 | below 60 |
+| attio.com | **qualified** | 73 | Series B (+10) raised Aug 2025, inside the 24-month window (+5); 190+ staff; holds ISO 27001 but no confirmed SOC 2 Type II (room for a second framework, +8); enterprise tier with SSO/audit logs; US + EU |
+| testsigma.com | rejected | DQ | `DQ_SPRINTO_CUSTOMER`: web search found it "uses Sprinto to power its Trust Center" (now on the known-customers list). Before that it was still a Series A company (+10) whose June 2024 round is outside the recency window. |
+| signeasy.com | rejected | 53 | latest funding is a Seed round, so not Series A–C |
+| gocomet.com | rejected | 39 | Series A (+10), but Feb 2022 is outside the recency window and other rows are weak |
+| hex.tech | rejected | 45 | below 60 |
 | stripe.com | rejected | DQ | `DQ_LATE_STAGE`: about 8,500 employees |
 | leena.ai | rejected | 30 | −20: its trust center is on Drata |
 | getastra.com / rocketlane.com | rejected | DQ | already Sprinto customers (list / app.sprinto.com link) |
@@ -70,6 +70,12 @@ Final verdicts (latest runs):
 | thesouledstore.com | rejected | DQ | D2C, not B2B |
 
 One qualified company out of ten is the system working as intended: the brief's failure mode is "qualifying every company".
+
+**Changes after an external review (19 Nov 2026):** stage now asks "what round is the company at" (+10) separately from
+"did it raise recently" (+5, 24-month window checked in Python), so a 2024 Series A company is no longer treated as
+"not Series A–C". Research rounds can only add verified answers, never silently lose them. The contact rule prefers
+relevance over email confidence and returns `no_poc` rather than a random executive. Pain points are labelled
+observed or inferred, and inferred ones are only asked as a question in the email.
 
 ### 7. "Why this person?"
 `poc.py` ranks Hunter contacts with the title table in ICP.md: under 150 people → CTO, then founder/CEO, then

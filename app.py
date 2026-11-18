@@ -92,15 +92,101 @@ def home() -> FileResponse:
 def health() -> dict:
     """Shows whether each service is configured. Never shows a secret or the owner's email."""
     s = get_settings()
+    db = ping_database(s)
+    usage = {"domains_today": None, "emails_today": None}
+    if db in ("ok", "not configured"):
+        try:
+            store = get_store()
+            usage = {"domains_today": store.count_events("web_domain"), "emails_today": store.sent_today()}
+        except Exception:
+            pass
     return {
         "status": "ok",
-        "database": ping_database(s),
+        "database": db,
         "gemini": "configured" if not s.missing_for("gemini") else "missing",
+        "gemini_model": s.gemini_model or "",
+        "web_search": "on" if s.use_search_grounding else "off",
         "hunter": "configured" if not s.missing_for("hunter") else "missing",
         "gmail": "configured" if (s.gmail_refresh_token.get_secret_value() or (PROJECT_ROOT / s.gmail_token_file).exists()) else "missing",
         "send_enabled": s.send_enabled,
-        "limits": {"domains_per_run": MAX_DOMAINS_PER_RUN, "runs_per_day": s.max_runs_per_day, "emails_per_day": s.max_emails_per_day},
+        "limits": {"domains_per_run": MAX_DOMAINS_PER_RUN, "runs_per_day": s.max_runs_per_day, "emails_per_day": s.max_emails_per_day,
+                   "llm_calls_per_domain": s.max_llm_calls_per_domain, "agent_rounds": s.max_agent_iterations,
+                   "pages_per_domain": s.max_pages_per_domain},
+        "usage_today": usage,
     }
+
+
+_hunter_cache: dict = {}
+
+
+@app.get("/api/quota")
+def quota() -> dict:
+    """Hunter searches left this month (Hunter's /account call is free). Cached for 10 minutes."""
+    import time
+
+    s = get_settings()
+    if s.missing_for("hunter"):
+        return {"hunter_searches_left": None, "hunter_min_remaining": s.hunter_min_remaining}
+    now = time.time()
+    if not _hunter_cache or now - _hunter_cache.get("at", 0) > 600:
+        try:
+            from outbound.poc import hunter_remaining_searches
+
+            _hunter_cache.update(left=hunter_remaining_searches(s), at=now)
+        except Exception:
+            _hunter_cache.update(left=None, at=now)
+    return {"hunter_searches_left": _hunter_cache.get("left"), "hunter_min_remaining": s.hunter_min_remaining}
+
+
+@app.get("/api/icp")
+def icp_rules() -> dict:
+    """The ICP and scoring rules exactly as Python reads them from docs/ICP.md (no secrets in here)."""
+    from outbound.icp import load_icp
+
+    icp = load_icp()
+    return {
+        "rows": [{"id": r.id, "name": r.name, "max_points": r.max_points, "critical": r.critical} for r in icp.rows.values()],
+        "rules": [{"id": r.id, "row": r.row, "points": r.points, "kind": r.kind, "question": r.question} for r in icp.rules],
+        "disqualifiers": [{"id": d.id, "name": d.name, "check": d.python_check} for d in icp.disqualifiers],
+        "settings": icp.settings,
+        "competitors": icp.competitors,
+        "known_customers": icp.customers,
+        "poc_tiers": [{"band": "any" if t.min_employees is None else f"{t.min_employees}-{t.max_employees}", "priority": t.priority,
+                       "title": t.title} for t in icp.poc_tiers],
+    }
+
+
+def _run_created(run_id: str) -> str:
+    """'20261119-022009-3f15' -> '2026-11-19T02:20:09' (run ids start with their local start time)."""
+    try:
+        d, t = run_id.split("-")[:2]
+        return f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}"
+    except (ValueError, IndexError):
+        return ""
+
+
+@app.get("/api/overview")
+def overview() -> dict:
+    """Totals across recent runs, counting each company once (its most recent result)."""
+    store = get_store()
+    latest: dict[str, dict] = {}
+    for run_id in store.list_runs(limit=15):  # newest first
+        run = store.load_run(run_id)
+        for domain, arts in run.items():
+            if domain in latest:
+                continue
+            b = decision_brief(arts)
+            latest[domain] = {"domain": domain, "run_id": run_id, "created": _run_created(run_id), "status": b["status"],
+                              "score": b["score"], "company": b["company"], "reason": (b["why_now"] or [b["disqualifier"]])[0] if (b["why_now"] or b["disqualifier"]) else "",
+                              "drafted": bool(b["what_to_say"]), "sent": ((arts.get("07_send") or {}).get("output") or {}).get("status") == "sent"}
+    items = sorted(latest.values(), key=lambda x: x["created"], reverse=True)
+    count = lambda st: sum(1 for x in items if x["status"] == st)  # noqa: E731
+    return mask({
+        "companies": len(items), "qualified": count("qualified"), "rejected": count("rejected"),
+        "review": count("review"), "failed": count("failed"),
+        "drafted": sum(1 for x in items if x["drafted"]), "sent": sum(1 for x in items if x["sent"]),
+        "recent": items[:12],
+    })
 
 
 @app.get("/api/sample-domains", response_class=PlainTextResponse)
@@ -182,7 +268,12 @@ def list_runs() -> list[dict]:
     out = []
     for run_id in store.list_runs(limit=15):
         rows = summary_rows(store.load_run(run_id))
-        out.append({"run_id": run_id, "domains": len(rows), "qualified": sum(r["verdict"] == "qualified" for r in rows)})
+        out.append({"run_id": run_id, "created": _run_created(run_id), "domains": len(rows),
+                    "names": [r["domain"] for r in rows],
+                    "qualified": sum(r["outcome"] == "qualified" for r in rows),
+                    "rejected": sum(r["outcome"] == "rejected" for r in rows),
+                    "review": sum(r["outcome"] == "review" for r in rows),
+                    "failed": sum(r["outcome"] == "failed" for r in rows)})
     return out
 
 

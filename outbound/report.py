@@ -12,7 +12,7 @@ import io
 from outbound.pipeline import STEP_FILES
 from outbound.storage import Store
 
-SUMMARY_COLUMNS = ["domain", "last_step", "status", "verdict", "score", "disqualifier", "top_reasons", "poc_name", "poc_title",
+SUMMARY_COLUMNS = ["domain", "outcome", "last_step", "status", "verdict", "score", "disqualifier", "top_reasons", "poc_name", "poc_title",
                    "email_subject", "email_flagged", "send_status", "llm_calls", "hunter_credits", "pages_readable", "pages_unreadable"]
 
 
@@ -63,6 +63,7 @@ def summary_rows(run: dict[str, dict[str, dict]]) -> list[dict]:
         send = (arts.get("07_send") or {}).get("output") or {}
         rows.append({
             "domain": domain,
+            "outcome": domain_status(arts),
             "last_step": last_name,
             "status": last.get("status", ""),
             "verdict": q.get("verdict", ""),
@@ -96,6 +97,37 @@ def _link(url: str) -> str:
 
 def _evidence_lines(evidence: list[dict], limit: int = 6) -> list[str]:
     return [f"  - {e['claim']}: \"{e['quote']}\" ({_link(e['source_url'])})" for e in evidence[:limit]]
+
+
+def domain_status(arts: dict) -> str:
+    """One of: qualified | rejected | review (needs a human) | failed (research failed) | pending.
+
+    insufficient_data is NOT merged into rejected: it means "we couldn't tell", which is a job for a person.
+    """
+    if any((arts.get(s) or {}).get("status") == "error" for s in ("01_scrape", "02_extract", "03_qualify")):
+        return "failed"
+    if (arts.get("01_scrape") or {}).get("status") == "stopped":
+        return "failed"
+    q = (arts.get("03_qualify") or {}).get("output") or {}
+    verdict = q.get("verdict")
+    if verdict == "insufficient_data":
+        return "review"
+    if verdict == "rejected":
+        return "rejected"
+    if verdict == "qualified":
+        mail = (arts.get("06_email") or {}).get("output") or {}
+        poc = (arts.get("04_poc") or {}).get("output") or {}
+        if mail.get("flagged") or poc.get("status") == "no_poc":
+            return "review"
+        return "qualified"
+    return "pending"
+
+
+def _tier_from_reasoning(text: str) -> tuple[str, int | None]:
+    import re
+
+    m = re.search(r"picks '([^']+)' \(priority (\d+)\)", text or "")
+    return (m.group(1), int(m.group(2))) if m else ("", None)
 
 
 def decision_brief(arts: dict) -> dict:
@@ -137,9 +169,33 @@ def decision_brief(arts: dict) -> dict:
     if mail.get("flagged"):
         uncertain.append("Email draft failed checks: " + "; ".join(mail.get("problems") or []))
 
+    profile = (arts.get("02_extract") or {}).get("output") or {}
+    tier, priority = _tier_from_reasoning(poc.get("reasoning", ""))
+    sources = {e.get("source_url") for e in (q.get("evidence") or [])} | {e.get("source_url") for p in pains for e in p.get("evidence", [])}
+    contact = None
+    if chosen:
+        contact = {
+            "name": f"{chosen.get('first_name', '')} {chosen.get('last_name') or ''}".strip(),
+            "title": chosen.get("position") or "",
+            "department": chosen.get("department") or "",
+            "email": chosen.get("email") or "",
+            "confidence": chosen.get("confidence"),
+            "tier": tier,
+            "priority": priority,
+            # relevance (does this role own the purchase?) is separate from Hunter's email confidence
+            "relevance": ("primary buyer" if priority is not None and priority <= 3 else
+                          "plausible buyer" if priority is not None and priority <= 5 else "fallback: verify"),
+        }
     return {
+        "status": domain_status(arts),
+        "company": profile.get("name") or "",
+        "description": profile.get("description") or "",
+        "employees": profile.get("employee_range") or "",
         "verdict": q.get("verdict") or "",
         "score": q.get("score"),
+        "disqualifier": q.get("disqualifier") or "",
+        "sources": len({s for s in sources if s}),
+        "contact": contact,
         "who": who,
         "why_now": why_now[:4],
         "evidence": [{"claim": e["claim"], "source_url": e["source_url"]} for e in (q.get("evidence") or [])[:3]],

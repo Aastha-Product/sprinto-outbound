@@ -70,6 +70,7 @@ Checked in this order. The list checks run in Python **before** any scoring call
 - everstage.com (Everstage: named on Sprinto's G2 listing as a customer)
 - spotdraft.com (SpotDraft: trust center "Powered by Sprinto", found by the agent loop on 2026-11-19)
 - hevodata.com (Hevo Data: privacy policy lists Sprinto for its trust center, found by the agent loop on 2026-11-19)
+- testsigma.com (Testsigma: "uses Sprinto to power its Trust Center", found by the agent loop on 2026-11-19)
 
 > rocketlane.com is also a Sprinto customer (case study sprinto.com/rocketlane-case-study) but is deliberately
 > NOT listed: the scraper catches it from its own app.sprinto.com trust-center link, which shows the
