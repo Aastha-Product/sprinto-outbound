@@ -9,6 +9,8 @@ decided yet. Choose the ONE next action that is most likely to resolve the most 
   "{{company}} SOC 2", "{{company}} careers security engineer", "{{company}} number of employees".
 - `decide`: stop researching (use this when another action is unlikely to change the answer).
 
+{{search_note}}
+
 `why` = one sentence: which open question this resolves and why this action is the best way.
 
 ## Status

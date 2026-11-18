@@ -192,6 +192,26 @@ def test_borderline_runs_loop_and_terminates(monkeypatch, ctx):
     assert llm.calls_used() <= ctx.settings.max_llm_calls_per_domain
 
 
+def test_search_quota_error_turns_search_off_for_the_run(monkeypatch, ctx):
+    from google.genai import errors
+
+    calls = []
+
+    def no_quota(contents, config):
+        calls.append(1)
+        raise errors.ClientError(429, {"error": {"message": "You exceeded your current quota"}})
+
+    monkeypatch.setattr(llm, "_call", no_quota)
+    monkeypatch.setattr(llm, "_search_off_reason", "")
+    monkeypatch.setattr(llm, "get_settings", lambda: ctx.settings)
+    assert llm.research_with_search("acme funding") == ("", [])
+    assert len(calls) == 1  # no retries on a quota error
+    assert not llm.search_available()
+    assert llm.research_with_search("acme hiring") == ("", []) and len(calls) == 1  # not even tried again
+    blocked = q.validate_action(AgentAction(action="web_search", argument="acme SOC 2", why="?"), ctx)
+    assert blocked.action == "decide"
+
+
 def test_invalid_actions_become_decide(ctx):
     bad = q.validate_action(AgentAction(action="fetch_page", argument="https://evil.com/x", why="?"), ctx)
     assert bad.action == "decide"

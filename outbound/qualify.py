@@ -242,6 +242,8 @@ def choose_action(ctx: QualifyContext, signals: list[Signal], score: int, unknow
             "open_questions": "\n".join(open_q) or "(none)",
             "fetched": "\n".join(f"- {u}" for u in fetched) or "(none)",
             "searches": "\n".join(f"- {q}" for q in ctx.searches) or "(none)",
+            "search_note": "" if llm.search_available() else
+            "IMPORTANT: `web_search` is NOT available right now. Choose `fetch_page` (e.g. /about, /careers, /security, /trust, /customers) or `decide`.",
         },
         AgentAction,
     )
@@ -257,32 +259,38 @@ def validate_action(action: AgentAction, ctx: QualifyContext) -> AgentAction:
             return AgentAction(action="decide", argument="", why=f"refused fetch_page outside {ctx.domain}: {arg}")
         return AgentAction(action="fetch_page", argument=url, why=action.why)
     if action.action == "web_search":
+        if not llm.search_available():
+            return AgentAction(action="decide", argument="", why="web search is unavailable on this API key")
         if not arg or arg in ctx.searches:
             return AgentAction(action="decide", argument="", why="empty or repeated search query")
         return AgentAction(action="web_search", argument=arg[:200], why=action.why)
     return AgentAction(action="decide", argument="", why=action.why)
 
 
-def execute_action(action: AgentAction, ctx: QualifyContext) -> str:
-    """Run the action and add whatever it found to the evidence corpus. Returns 'what we learned'."""
+def execute_action(action: AgentAction, ctx: QualifyContext) -> tuple[str, bool]:
+    """Run the action and add whatever it found to the evidence corpus.
+
+    Returns ('what we learned', added_new_sources). If nothing new was added, the caller skips the
+    re-scoring LLM call (nothing could have changed).
+    """
     if action.action == "fetch_page":
         page, sigs = fetch_extra_page(action.argument, ctx.domain, ctx.settings, ctx.fetcher)
         ctx.extra_pages.append(page.url)
         if page.error:
-            return f"could not fetch {action.argument}: {page.error}"
+            return f"could not fetch {action.argument}: {page.error}", False
         ctx.scrape.detected_signals.extend(sigs)
         ctx.corpus.add_page(page, sigs)
-        return f"fetched {page.url} ({len(page.text)} characters of text, {len(sigs)} cheap signals)"
+        return f"fetched {page.url} ({len(page.text)} characters of text, {len(sigs)} cheap signals)", True
     if action.action == "web_search":
         ctx.searches.append(action.argument)
         text, citations = llm.research_with_search(action.argument)
         if not text:
-            return "web search unavailable or returned nothing"
+            return "web search unavailable or returned nothing", False
         if not citations:
-            return "search answered without citations, so it cannot be used as evidence"
+            return "search answered without citations, so it cannot be used as evidence", False
         ctx.corpus.add_search(action.argument, text, citations)
-        return f"search found {len(citations)} source(s): " + " ".join(text.split())[:300]
-    return "decided to stop researching"
+        return f"search found {len(citations)} source(s): " + " ".join(text.split())[:300], True
+    return "decided to stop researching", False
 
 
 # ---------------------------------------------------------------- main entry point
@@ -304,7 +312,7 @@ def qualify(ctx: QualifyContext) -> QualificationResult:
         score, lines = score_signals(signals, icp)
         unknowns = critical_unknowns(signals, ctx.profile, icp)
         borderline = borderline_min <= score < qualified_min
-        needs_customer_check = score >= borderline_min and not customer_check_done
+        needs_customer_check = score >= borderline_min and not customer_check_done and llm.search_available()
         hopeless = max_possible_score(signals, icp) < qualified_min
         if hopeless or not (borderline or unknowns or needs_customer_check):
             break
@@ -325,7 +333,11 @@ def qualify(ctx: QualifyContext) -> QualificationResult:
             iterations.append(AgentIteration(n=len(iterations) + 1, action=action, learned="agent chose to stop", score_before=score, score_after=score))
             break
 
-        learned = execute_action(action, ctx)
+        learned, added = execute_action(action, ctx)
+        if not added:  # nothing new to read, so don't spend a call re-asking the same questions
+            iterations.append(AgentIteration(n=len(iterations) + 1, action=action, learned=learned, score_before=score, score_after=score))
+            log.info("[%s] agent loop %d: %s(%s) -> nothing new", ctx.domain, len(iterations), action.action, action.argument)
+            continue
         before_ids = {(e.source_url, e.quote) for s in signals for e in s.evidence}
         signals, summary = extract_signals(ctx)
         new_ev = [e for s in signals for e in s.evidence if (e.source_url, e.quote) not in before_ids]

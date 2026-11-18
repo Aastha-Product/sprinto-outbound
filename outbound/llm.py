@@ -137,7 +137,14 @@ def get_client() -> genai.Client:
     """Create the Gemini client once (needs GEMINI_API_KEY)."""
     settings = get_settings()
     settings.require("gemini_key")
-    return genai.Client(api_key=settings.gemini_api_key.get_secret_value())
+    # A hard per-call time limit: without it a stuck request can freeze the whole run.
+    return genai.Client(
+        api_key=settings.gemini_api_key.get_secret_value(),
+        http_options=types.HttpOptions(timeout=GEMINI_TIMEOUT_SECONDS * 1000),
+    )
+
+
+GEMINI_TIMEOUT_SECONDS = 120
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -151,26 +158,29 @@ def _is_retryable(exc: BaseException) -> bool:
 
 _retry = retry(
     retry=retry_if_exception(_is_retryable),
-    wait=wait_exponential(multiplier=2, min=2, max=30),
-    stop=stop_after_attempt(4),
+    # Free tier = a few calls per minute, so back off up to a minute (4s, 8s, 16s, 32s, 60s).
+    wait=wait_exponential(multiplier=2, min=4, max=60),
+    stop=stop_after_attempt(6),
     reraise=True,
     before_sleep=lambda rs: log.warning(
-        "Gemini busy (%s). Retrying (attempt %d)...", type(rs.outcome.exception()).__name__, rs.attempt_number
+        "Gemini busy (%s). Waiting, then retrying (attempt %d)...", type(rs.outcome.exception()).__name__, rs.attempt_number
     ),
 )
 
 
-@_retry
-def _generate_raw(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
+def _call(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
     settings = get_settings()
     settings.require("gemini")
     return get_client().models.generate_content(model=settings.gemini_model, contents=contents, config=config)
 
 
-def _generate(contents: str, config: types.GenerateContentConfig) -> types.GenerateContentResponse:
-    """One Gemini call with retries; account-level failures become `LLMFatalError`."""
+_call_with_retry = _retry(_call)
+
+
+def _generate(contents: str, config: types.GenerateContentConfig, retries: bool = True) -> types.GenerateContentResponse:
+    """One Gemini call (with retries unless `retries=False`); account-level failures become `LLMFatalError`."""
     try:
-        return _generate_raw(contents, config)
+        return (_call_with_retry if retries else _call)(contents, config)
     except errors.ClientError as exc:
         fatal = _fatal(exc)
         if fatal:
@@ -230,24 +240,40 @@ def research_with_search(question: str) -> tuple[str, list[Citation]]:
     Grounding can fail (quota, model doesn't support it, turned off in .env). In that case we
     log a warning and return ("", []), so the agent loop simply continues with website data only.
     """
-    settings = get_settings()
-    if not settings.use_search_grounding:
-        log.warning("Search grounding is off (USE_SEARCH_GROUNDING=false); skipping web search.")
+    if not search_available():
+        log.warning("Web search is unavailable (%s); continuing with website data only.", _search_off_reason or "USE_SEARCH_GROUNDING=false")
         return "", []
     prompt = render_prompt("research", {"question": question})
-    _budget.spend(settings.max_llm_calls_per_domain)
+    _budget.spend(get_settings().max_llm_calls_per_domain)
     config = types.GenerateContentConfig(
         tools=[types.Tool(google_search=types.GoogleSearch())],
         temperature=0.0,
     )
     try:
-        response = _generate(prompt, config)
+        response = _generate(prompt, config, retries=False)  # a quota error won't fix itself by retrying
     except LLMFatalError:
         raise
     except errors.APIError as exc:
-        log.warning("Web search (grounding) failed: %s. Continuing with website data only.", exc)
+        if getattr(exc, "code", None) in (403, 429):  # no grounding quota on this key: stop trying this run
+            disable_search(f"Google Search quota not available for this key (HTTP {exc.code})")
+        log.warning("Web search failed (HTTP %s). Continuing with website data only.", getattr(exc, "code", "?"))
         return "", []
     return response.text or "", _extract_citations(response)
+
+
+_search_off_reason = ""
+
+
+def search_available() -> bool:
+    """False if USE_SEARCH_GROUNDING=false or a search already hit a quota error in this process."""
+    return get_settings().use_search_grounding and not _search_off_reason
+
+
+def disable_search(reason: str) -> None:
+    global _search_off_reason
+    if not _search_off_reason:
+        log.warning("Turning web search off for the rest of this run: %s", reason)
+    _search_off_reason = reason
 
 
 def _extract_citations(response: types.GenerateContentResponse) -> list[Citation]:
