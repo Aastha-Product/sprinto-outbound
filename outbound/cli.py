@@ -21,6 +21,7 @@ from rich.table import Table
 from outbound import PROJECT_ROOT
 from outbound.config import ConfigError, get_settings
 from outbound.domains import parse_domains, read_domains
+from outbound import llm
 from outbound.llm import LLMFatalError
 from outbound.logging_setup import setup_logging
 from outbound.pipeline import STEP_TITLES, RunOptions, StepOutcome, find_latest_run, new_run_id, parse_steps, run_domain
@@ -87,6 +88,7 @@ def main(argv: list[str] | None = None) -> int:
 
     used_runs = set()
     fatal: str | None = None
+    llm.start_run()  # per-run ceiling: MAX_LLM_CALLS_PER_RUN / MAX_SEARCHES_PER_RUN
     for d in domains:
         if steps[0] > 1 and d not in run_ids:
             continue
@@ -107,6 +109,9 @@ def main(argv: list[str] | None = None) -> int:
             console.print(f"Artifacts: {store.runs_dir / run_id}")
         else:
             console.print(f"Artifacts saved in Neon under run id {run_id}")
+    u = llm.run_usage()
+    console.print(f"Gemini usage this run: {u['calls']}/{u['max_calls']} paid calls, {u['searches']}/{u['max_searches']} paid searches "
+                  f"· {u['cached_calls']} calls and {u['cached_searches']} searches reused from the cache (free)")
     if fatal:
         console.print(f"[bold red]Not finished: {fatal}[/bold red]\nAfter fixing it, re-run the same command and add "
                       f"--run {sorted(used_runs)[-1]} to fill in the same run (scraped pages are cached).")

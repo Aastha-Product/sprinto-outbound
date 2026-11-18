@@ -212,11 +212,11 @@ def test_search_quota_error_turns_search_off_for_the_run(monkeypatch, ctx):
     assert blocked.action == "decide"
 
 
-def test_giving_up_with_critical_unknowns_fetches_a_likely_page(ctx):
-    ctx.scrape.candidate_links = ["https://acme.io/blog/post", "https://acme.io/company/about-us"]
+def test_giving_up_with_critical_unknowns_fetches_careers_first(ctx):
+    ctx.scrape.candidate_links = ["https://acme.io/blog/post", "https://acme.io/company/about-us", "https://acme.io/jobs"]
     stop = AgentAction(action="decide", argument="", why="nothing else to do")
     action = q.fallback_if_giving_up(stop, ctx, ["Stage fit: Series A–C"])
-    assert action.action == "fetch_page" and action.argument == "https://acme.io/company/about-us"
+    assert action.action == "fetch_page" and action.argument == "https://acme.io/careers"  # L4: careers is rung one
     assert "Python fallback" in action.why
     assert q.fallback_if_giving_up(stop, ctx, []).action == "decide"  # nothing critical missing: allowed to stop
 

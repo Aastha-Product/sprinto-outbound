@@ -9,6 +9,11 @@ Safety built in:
 - Retries with exponential backoff on rate limits (429) and server errors (5xx).
 - A per-domain call budget (`MAX_LLM_CALLS_PER_DOMAIN`). Call `start_domain(domain)` before
   working on a new domain; once the budget is used up, `LLMBudgetExceeded` is raised.
+- A per-run ceiling (`MAX_LLM_CALLS_PER_RUN`, `MAX_SEARCHES_PER_RUN`), switched on by `start_run()` in the CLI.
+  Reaching it stops the whole run cleanly (L4: "a loop without a limit is a cost without a ceiling").
+- An answer cache (L4: "a company researched last week should cost nothing this week"): the same prompt to the
+  same model returns the saved answer for free. Switched on by `use_store(store)`; cached answers count against
+  no budget.
 """
 
 from __future__ import annotations
@@ -49,6 +54,10 @@ class LLMBudgetExceeded(RuntimeError):
 
 class LLMFatalError(RuntimeError):
     """Gemini refuses every call (no credits, bad key, no access). The whole run should stop."""
+
+
+class RunBudgetExceeded(LLMFatalError):
+    """The per-run ceiling was reached. Stops the run like any fatal error; saved results are kept."""
 
 
 FATAL_HINTS = {
@@ -107,6 +116,84 @@ def start_domain(domain: str | None, already_used: int = 0) -> None:
 
 def calls_used() -> int:
     return _budget.used
+
+
+# ---------------------------------------------------------------- per-run ceiling + usage stats
+class _RunMeter:
+    """Counts paid calls and searches for one CLI run. Inactive (no ceiling) until `start_run()`."""
+
+    def __init__(self) -> None:
+        self.active = False
+        self.max_calls = self.max_searches = 0
+        self.calls = self.searches = self.cached_calls = self.cached_searches = 0
+
+    def charge(self, kind: str) -> None:
+        if kind == "search":
+            if self.active and self.searches >= self.max_searches:
+                raise RunBudgetExceeded(f"Run budget reached: {self.searches} web searches (MAX_SEARCHES_PER_RUN). "
+                                        "Everything finished so far is saved; raise the limit in .env to continue.")
+            self.searches += 1
+        else:
+            if self.active and self.calls >= self.max_calls:
+                raise RunBudgetExceeded(f"Run budget reached: {self.calls} Gemini calls (MAX_LLM_CALLS_PER_RUN). "
+                                        "Everything finished so far is saved; raise the limit in .env to continue.")
+            self.calls += 1
+
+
+_run = _RunMeter()
+
+
+def start_run(max_calls: int | None = None, max_searches: int | None = None) -> None:
+    """Switch on the per-run ceiling and reset the counters (the CLI calls this once per run)."""
+    s = get_settings()
+    _run.__init__()
+    _run.active = True
+    _run.max_calls = max_calls if max_calls is not None else s.max_llm_calls_per_run
+    _run.max_searches = max_searches if max_searches is not None else s.max_searches_per_run
+
+
+def run_usage() -> dict[str, int]:
+    """Paid vs cached calls and searches so far in this run (for the end-of-run summary)."""
+    return {"calls": _run.calls, "cached_calls": _run.cached_calls, "searches": _run.searches,
+            "cached_searches": _run.cached_searches, "max_calls": _run.max_calls, "max_searches": _run.max_searches}
+
+
+# ---------------------------------------------------------------- answer cache
+LLM_CACHE_DAYS = 14
+SEARCH_CACHE_DAYS = 7
+_store = None  # set by use_store(); None = no caching (e.g. in tests)
+
+
+def use_store(store) -> None:
+    """Give the LLM layer a Store so identical prompts are answered from the cache (Neon or files)."""
+    global _store
+    _store = store
+
+
+def _cache_key(*parts: object) -> str:
+    import hashlib
+    import json
+
+    return hashlib.sha256(json.dumps(parts, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:40]
+
+
+def _cache_get(kind: str, key: str, days: int) -> dict | None:
+    if _store is None:
+        return None
+    try:
+        return _store.get_cache(kind, key, max_age_days=days)
+    except Exception as exc:  # a cache problem must never break a run; just pay for the call
+        log.debug("cache read failed (%s); calling Gemini", exc)
+        return None
+
+
+def _cache_set(kind: str, key: str, data: dict) -> None:
+    if _store is None:
+        return
+    try:
+        _store.set_cache(kind, key, data)
+    except Exception as exc:
+        log.debug("cache write failed (%s)", exc)
 
 
 def calls_left() -> int:
@@ -205,7 +292,18 @@ def generate_json(
     """
     settings = get_settings()
     prompt = render_prompt(prompt_name, variables)  # fail on a bad prompt BEFORE spending budget
+    key = _cache_key("json", settings.gemini_model, prompt_name, prompt, schema.__name__, temperature)
+    cached = _cache_get("llm", key, LLM_CACHE_DAYS)
+    if cached and cached.get("text"):
+        try:
+            result = schema.model_validate_json(cached["text"])
+            _run.cached_calls += 1
+            log.debug("'%s': answered from cache (free)", prompt_name)
+            return result
+        except ValidationError:
+            pass  # schema changed since it was cached: ask again
     _budget.spend(settings.max_llm_calls_per_domain)
+    _run.charge("call")
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
         response_json_schema=llm_schema(schema),
@@ -216,9 +314,11 @@ def generate_json(
     if not text.strip():
         raise LLMError(f"Gemini returned an empty answer for '{prompt_name}' (possibly blocked by safety filters).")
     try:
-        return schema.model_validate_json(text)
+        result = schema.model_validate_json(text)
     except ValidationError as exc:
         raise LLMError(f"Gemini's answer for '{prompt_name}' did not match {schema.__name__}: {exc}") from exc
+    _cache_set("llm", key, {"text": text, "prompt": prompt_name, "model": settings.gemini_model})
+    return result
 
 
 def llm_schema(schema: type[BaseModel]) -> dict:
@@ -244,7 +344,14 @@ def research_with_search(question: str) -> tuple[str, list[Citation]]:
         log.warning("Web search is unavailable (%s); continuing with website data only.", _search_off_reason or "USE_SEARCH_GROUNDING=false")
         return "", []
     prompt = render_prompt("research", {"question": question})
+    key = _cache_key("search", get_settings().gemini_model, prompt)
+    cached = _cache_get("search", key, SEARCH_CACHE_DAYS)
+    if cached and cached.get("text") and cached.get("citations"):
+        _run.cached_searches += 1
+        log.info("Web search '%s': answered from cache (free)", question)
+        return cached["text"], [Citation.model_validate(c) for c in cached["citations"]]
     _budget.spend(get_settings().max_llm_calls_per_domain)
+    _run.charge("search")
     config = types.GenerateContentConfig(
         tools=[types.Tool(google_search=types.GoogleSearch())],
         temperature=0.0,
@@ -258,7 +365,10 @@ def research_with_search(question: str) -> tuple[str, list[Citation]]:
             disable_search(f"Google Search quota not available for this key (HTTP {exc.code})")
         log.warning("Web search failed (HTTP %s). Continuing with website data only.", getattr(exc, "code", "?"))
         return "", []
-    return response.text or "", _extract_citations(response)
+    text, citations = response.text or "", _extract_citations(response)
+    if text and citations:  # only cache answers that can be used as evidence
+        _cache_set("search", key, {"text": text, "citations": [c.model_dump() for c in citations], "question": question})
+    return text, citations
 
 
 _search_off_reason = ""

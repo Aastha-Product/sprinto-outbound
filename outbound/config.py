@@ -71,6 +71,8 @@ class Settings(BaseSettings):
     max_chars_per_page: int = 8000
     max_agent_iterations: int = 3
     max_llm_calls_per_domain: int = 12
+    max_llm_calls_per_run: int = 50  # CLI run ceiling (paid Gemini calls; cached answers are free)
+    max_searches_per_run: int = 15  # CLI run ceiling for Google Search grounding calls
     request_timeout_seconds: float = 15
     user_agent: str = "MESA-Student-Research-Bot/0.1 (educational project)"
 

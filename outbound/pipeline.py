@@ -111,6 +111,7 @@ class DomainRunner:
     def run_step(self, n: int) -> StepOutcome:
         """Run ONE step and save its artifact. Never raises: errors are saved as an 'error' artifact."""
         llm.start_domain(self.domain, already_used=self._calls_before(n))
+        llm.use_store(self.store)  # identical prompts are answered from the cache, for free
         handler: Callable[[], StepOutcome] = getattr(self, f"_step{n}")
         try:
             return handler()

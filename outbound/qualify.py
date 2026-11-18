@@ -87,7 +87,7 @@ class QualifyContext:
 
 
 # Pages most likely to state headcount / funding (used by the Python fallback below).
-STAGE_PAGE_HINTS = ("about", "company", "team", "careers", "jobs", "press", "news", "funding", "investors", "announc")
+STAGE_PAGE_HINTS = ("careers", "jobs", "about", "company", "team", "press", "news", "funding", "investors", "announc")
 # Where certifications live. If one of these pages exists but can't be read, "no SOC 2 found" proves nothing.
 TRUST_PAGE_HINTS = ("trust", "security", "compliance")
 
@@ -306,7 +306,11 @@ def fallback_if_giving_up(action: AgentAction, ctx: QualifyContext, unknowns: li
     """
     if action.action != "decide" or not unknowns:
         return action
-    likely = [u for u in ctx.fetchable_pages() if any(h in urlparse(u).path.lower() for h in STAGE_PAGE_HINTS)]
+    def rung(url: str) -> int:  # L4 evidence map: careers is rung one for stage (headcount, roles, often funding)
+        path = urlparse(url).path.lower()
+        return min((i for i, h in enumerate(STAGE_PAGE_HINTS) if h in path), default=len(STAGE_PAGE_HINTS))
+
+    likely = sorted((u for u in ctx.fetchable_pages() if rung(u) < len(STAGE_PAGE_HINTS)), key=rung)
     if not likely:
         return action
     return AgentAction(action="fetch_page", argument=likely[0],
