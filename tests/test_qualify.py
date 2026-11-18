@@ -249,6 +249,15 @@ def test_fetchable_pages_skips_fetched_and_adds_fallbacks(ctx):
     assert pages[0] == "https://acme.io/press" and "https://acme.io/careers" in pages
 
 
+def test_research_rounds_never_lose_verified_answers():
+    prev = [yes("ENT_DEMO"), yes("GEO_US"), Signal(rule_id="STAGE_SIZE", value="unknown")]
+    new = [Signal(rule_id="ENT_DEMO", value="unknown"),                       # forgot -> keep old yes
+           Signal(rule_id="GEO_US", value="no", evidence=[ev("Book a demo")]),  # evidenced no -> overrides
+           yes("STAGE_SIZE")]                                                  # newly found -> added
+    merged = {s.rule_id: s.value for s in q.merge_signals(prev, new)}
+    assert merged == {"ENT_DEMO": "yes", "GEO_US": "no", "STAGE_SIZE": "yes"}
+
+
 def test_invalid_actions_become_decide(ctx):
     bad = q.validate_action(AgentAction(action="fetch_page", argument="https://evil.com/x", why="?"), ctx)
     assert bad.action == "decide"

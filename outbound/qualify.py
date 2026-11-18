@@ -236,6 +236,25 @@ def extract_signals(ctx: QualifyContext) -> tuple[list[Signal], str]:
     return clean_signals(report.signals, ctx), report.summary
 
 
+def merge_signals(previous: list[Signal], new: list[Signal]) -> list[Signal]:
+    """Research rounds may only ADD verified knowledge, never silently lose it.
+
+    Each round re-asks every ICP question, and the model sometimes answers "unknown" to something it proved last
+    round. Fixed rule per rule id: an answer backed by verified evidence beats one without; between two evidenced
+    answers, the newer one wins (so new evidence CAN overturn an old "yes", but only with its own quote).
+    """
+    prev = {s.rule_id: s for s in previous}
+    merged = []
+    for s in new:
+        old = prev.get(s.rule_id)
+        old_backed = old is not None and old.value != "unknown" and bool(old.evidence)
+        new_backed = s.value != "unknown" and bool(s.evidence)
+        merged.append(old if old_backed and not new_backed else s)
+    seen = {s.rule_id for s in new}
+    merged += [s for s in previous if s.rule_id not in seen]
+    return merged
+
+
 MONTHS = {m: i + 1 for i, m in enumerate(("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"))}
 
 
@@ -449,7 +468,8 @@ def qualify(ctx: QualifyContext) -> QualificationResult:
             log.info("[%s] agent loop %d: %s(%s) -> nothing new", ctx.domain, len(iterations), action.action, action.argument)
             continue
         before_ids = {(e.source_url, e.quote) for s in signals for e in s.evidence}
-        signals, summary = extract_signals(ctx)
+        new_signals, summary = extract_signals(ctx)
+        signals = merge_signals(signals, new_signals)
         new_ev = [e for s in signals for e in s.evidence if (e.source_url, e.quote) not in before_ids]
         after, _ = score_signals(signals, icp)
         iterations.append(AgentIteration(n=len(iterations) + 1, action=action, learned=learned, new_evidence=new_ev, score_before=score, score_after=after))
