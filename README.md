@@ -16,7 +16,9 @@ Give it a list of company domains. With no human decisions in between, it:
 
 Every step saves a JSON artifact with its reasoning and evidence, plus a `decision_report.md` per run.
 
-- **Website:** ‹Vercel link: added after deployment›
+- **Website:** `uvicorn app:app --reload` locally; to publish it, follow `docs/SETUP_WINDOWS.md` step 9 (Vercel + Neon)
+- **Latest result:** 10 domains in, **1 qualified (Attio)**, 9 rejected with reasons; Attio's email drafted and checked
+  (see `docs/DEFENSE_NOTES.md`, question 6)
 - **Setup:** [`docs/SETUP_WINDOWS.md`](docs/SETUP_WINDOWS.md) · **Owner to-do:** [`docs/OWNER_CHECKLIST.md`](docs/OWNER_CHECKLIST.md)
 - **Defense notes:** [`docs/DEFENSE_NOTES.md`](docs/DEFENSE_NOTES.md)
 

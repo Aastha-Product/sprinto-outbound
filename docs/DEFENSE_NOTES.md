@@ -1,6 +1,7 @@
 # Defense notes: 10 likely questions, with answers from the actual code
 
-Replace each `‹fill after run›` with numbers from `runs\<id>\summary.csv` / `decision_report.md` after your first real run.
+Numbers below come from the real runs saved in Neon (latest: run `20261119-022009-3f15`, 19 Nov 2026).
+Re-check them in `decision_report.md` (website: "Open decision report") before the defense.
 
 ---
 
@@ -34,7 +35,11 @@ the mandatory "is this already a Sprinto customer?" web search for anyone scorin
 ONE action from a fixed set (`fetch_page` on the same domain, `web_search`, or `decide`). Python validates it
 (an off-domain URL becomes `decide`), runs it, adds the new evidence and re-scores. It stops at 3 iterations, when the
 LLM budget gets low, or when even "every unknown = yes" can't reach 60. Every iteration is saved in
-`03_qualify.json` with action, why, what was learned and score before → after. Example from my run: ‹fill after run›.
+`03_qualify.json` with action, why, what was learned and score before → after. Example from my run: **Attio** scored
+50 from its website alone (funding unknown). Iteration 1 searched "attio.com Sprinto customer" (no citable answer, so
+no change). Iteration 2 searched its funding and found *"In August 2025, Attio announced a $52 million Series B"*:
+score 50 → 65, qualified. **Signeasy** went the other way: the search found it was bootstrapped with only a Seed round,
+so STAGE_FUNDING became `no` and it was rejected instead of being guessed into the list.
 
 ### 5. "What if the website has no data?"
 Then the profile is mostly `unknown`, the loop searches the web for the critical facts, and if they're still unknown
@@ -45,24 +50,50 @@ the verdict is `insufficient_data`. That's an honest outcome, not a forced yes. 
 **Rocketlane.** My seed list guessed "likely fit", but the scraper found its "Trust center" link points to
 `app.sprinto.com`, a Sprinto-hosted trust center, so it's already a customer. `qualify.py::list_disqualifier` rejects it
 with that link as evidence, before any scoring call. Also: `getastra.com` (listed customer), `vanta.com` (competitor),
-`thesouledstore.com` (D2C, not B2B). Final verdict table: ‹fill after run›.
+`thesouledstore.com` (D2C, not B2B). In the first run, web search also showed that **SpotDraft** and **Hevo Data**
+(both on my "likely fit" list) are already Sprinto customers; four of my five original guesses were wrong, which is
+why the seed list was replaced.
+
+Final verdicts (latest runs):
+
+| Domain | Verdict | Score | Why |
+|---|---|---|---|
+| attio.com | **qualified** | 65 | Series B Aug 2025 (15 months, inside the 24-month window), 190+ staff, enterprise tier with SSO/audit logs, US + EU |
+| testsigma.com | rejected | 35 | Series A June 2024 is 29 months old, outside the window (checked in Python, not by the model) |
+| signeasy.com | rejected | 42 | bootstrapped, only a Seed round |
+| gocomet.com | rejected | 29 | Series A Feb 2022, outside the window |
+| hex.tech | rejected | 48 | below 60 |
+| stripe.com | rejected | DQ | `DQ_LATE_STAGE`: about 8,500 employees |
+| leena.ai | rejected | 30 | −20: its trust center is on Drata |
+| getastra.com / rocketlane.com | rejected | DQ | already Sprinto customers (list / app.sprinto.com link) |
+| vanta.com | rejected | DQ | competitor |
+| thesouledstore.com | rejected | DQ | D2C, not B2B |
+
+One qualified company out of ten is the system working as intended: the brief's failure mode is "qualifying every company".
 
 ### 7. "Why this person?"
 `poc.py` ranks Hunter contacts with the title table in ICP.md: under 150 people → CTO, then founder/CEO, then
 VP/Head of Engineering; 150–500 → CISO/Head of Security first. Ties are broken by Hunter confidence (≥ 70 preferred),
 and nobody without a first name is ever chosen. `04_poc.json` explains why the chosen person beat the top 3 alternatives.
-The LLM is only used when no title matches the table at all.
+The LLM is only used when no title matches the table at all. In my run, Attio has 190+ people (the 150–500 band) and
+Hunter returned no CISO, VP Engineering or Head of IT, so the rule fell to "any executive" and picked **Nicolas Sharp,
+CEO (confidence 84)** over the VP of Marketing, Head of Solutions and VP of Sales (79 each). A founder-CEO at a
+Series B company is a realistic buyer for "enterprise deals stalled on SOC 2".
 
 ### 8. "How does it scale beyond 25 Hunter searches?"
 Hunter is called only for *qualified* companies (most are rejected before step 4), results are cached forever, and the
-free `/account` call stops the pipeline before the last 3 searches. In practice ‹fill after run›/10 seed domains used a
-credit. Beyond that: Hunter's paid tier, or swap `poc.py` for Apollo's API. Nothing else changes, because step 4
+free `/account` call stops the pipeline before the last 3 searches. In practice **1 of 10** seed domains used a credit
+(Attio), and every re-run of Attio cost 0 (cache). Beyond that: Hunter's paid tier, or swap `poc.py` for Apollo's API. Nothing else changes, because step 4
 only has to return a `PocResult`.
 
 ### 9. "What does it cost per company?"
 Gemini: 1 call for a company rejected by the lists, ~5–12 calls for a full run (capped at 12 by
-`MAX_LLM_CALLS_PER_DOMAIN`). On the free tier that's ~$0. Hunter: 0–1 search. Time: ~20–60 s per company
-vs. 15–20 minutes by hand (from the brief). My run: ‹fill after run› (see `llm_calls` and `hunter_credits` in summary.csv).
+`MAX_LLM_CALLS_PER_DOMAIN`), and every run is capped at 50 paid calls / 15 web searches. Hunter: 0–1 search.
+Time: ~20–60 s per company vs. 15–20 minutes by hand (from the brief). My runs: list rejections used **1 call** each
+(Astra, Vanta, The Souled Store); full qualification with the agent loop used **3–8 calls**; Attio end-to-end
+(qualify + contact + pain points + email) used **8 calls, 1 Hunter credit**. Re-qualifying 5 companies with web search
+cost 17 calls and 8 searches. We use the cheapest model (`gemini-3.5-flash-lite`) and cache every answer, so a
+re-run on unchanged data is free (L4: "your bill is a decision").
 
 ### 10. "Could this email a real prospect by mistake? Could someone abuse the public site?"
 No. `send.py` takes no recipient at all; it always uses `OWNER_EMAIL` and calls `assert_recipient()` on the final
