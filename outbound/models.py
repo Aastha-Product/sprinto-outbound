@@ -104,8 +104,16 @@ class Signal(BaseModel):
     """One rubric signal extracted by the LLM. Python (not the LLM) turns signals into points."""
 
     rule_id: str  # matches a rule id in docs/ICP.md, e.g. "ENT_PLAN"
-    value: str  # "yes" | "no" | "unknown", or a value such as "Series B" / "51-200"
+    value: Literal["yes", "no", "unknown"]
+    detail: str = ""  # optional value, e.g. "Series B, March 2025" or "about 250 employees"
     evidence: list[Evidence] = []
+
+
+class SignalReport(BaseModel):
+    """What the qualify prompt returns: one signal per ICP rule. No points; Python scores."""
+
+    signals: list[Signal]
+    summary: str = ""
 
 
 class ScoreLine(BaseModel):
@@ -130,6 +138,9 @@ class AgentIteration(BaseModel):
 class QualificationResult(BaseModel):
     verdict: Literal["qualified", "rejected", "insufficient_data"]
     score: int
+    max_possible_score: int | None = None  # score if every unknown rule turned out to be "yes"
+    critical_unknowns: list[str] = []
+    top_reasons: list[str] = []
     score_breakdown: list[ScoreLine] = []
     signals: list[Signal] = []
     disqualifier: str | None = None

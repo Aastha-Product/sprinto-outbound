@@ -1,7 +1,11 @@
 # Sprinto ICP & Qualification Rubric
 
-> Source of truth for Step 3 (Qualify). `outbound/qualify.py` loads this file into the prompt.
-> **Owner: edit this freely, because defending it is part of the assignment.** It's a researched starting point, not a final answer.
+> **Source of truth** for Step 3 (Qualify) and Step 4 (PoC). The code reads the tables and lists below
+> (`outbound/icp.py`); no ICP rule is written anywhere else. Change a number here and the scorer changes.
+> **Owner: edit this freely, because defending it is part of the assignment.**
+>
+> Format rules so the code can read this file: keep the `##` headings, keep table columns in the same
+> order, one domain per bullet in the lists (text after the domain is a note).
 
 ## Why this definition (research summary)
 - The case brief: SaaS, **Series A–C**, either **preparing for an audit** or **under pressure from enterprise
@@ -16,46 +20,129 @@
 - Competitors: **Vanta, Drata, Secureframe, Scrut, Thoropass, OneTrust/Tugboat**. A company already running one
   of these (e.g., trust center hosted on `trust.vanta.com` / Drata / Secureframe) is a switching sale, so score it low.
 
-## Hard disqualifiers (any one → `rejected`)
-1. Not a B2B software / cloud product (e.g., D2C brand, agency, retailer, consumer app with no B2B tier).
-2. Is a compliance-automation vendor (Sprinto competitor) or Sprinto itself.
-3. Public company or clearly late-stage (≈ > 2,000 employees, IPO'd, or "Fortune 500" scale).
-4. Publicly listed as an existing Sprinto customer (case study / logo on sprinto.com).
+## How scoring works (who does what)
+- **The LLM never assigns points.** It only answers each question in *Scoring rules* and *Hard disqualifiers*
+  with `yes`, `no` or `unknown`, plus evidence `{claim, source_url, quote}`.
+- **Python checks the evidence**: the `source_url` must be a page we actually fetched (or a web-search
+  citation) and the `quote` must really appear in that page's text. Evidence that fails is thrown away.
+- **Python applies the points**: a rule earns its points only if the answer is `yes` AND it has verified
+  evidence. `no`, `unknown` or no evidence = 0. Each row is capped at its max, the total is capped at 0–100.
+- So **the same signals always give the same score**.
 
-## Known Sprinto customers (disqualifier #4)
-> `outbound/qualify.py` reads the domains in this list (one per bullet, text after the domain is a note).
+## Hard disqualifiers (any one → `rejected`)
+Checked in this order. The list checks run in Python **before** any scoring call to the LLM.
+
+| Rule ID | Disqualifier | Python list / profile check | Question for the LLM (yes = disqualified) |
+|---|---|---|---|
+| DQ_COMPLIANCE_VENDOR | Is a compliance-automation vendor (Sprinto competitor) or Sprinto itself | domain is in *Known competitors* | Does this company itself sell compliance-automation software (SOC 2 / ISO 27001 automation, GRC platform)? |
+| DQ_SPRINTO_CUSTOMER | Publicly listed as an existing Sprinto customer | domain is in *Known Sprinto customers*, or the site links to a trust center hosted on one of *Sprinto's own domains* (e.g. `app.sprinto.com`) | Is this company publicly named as a Sprinto customer (case study, logo, testimonial)? |
+| DQ_NOT_B2B | Not a B2B software / cloud product (D2C brand, agency, retailer, consumer app with no B2B tier) | profile says `is_b2b_software = false` with evidence | Is this company NOT a B2B software / cloud product (e.g., a D2C brand, agency, retailer or consumer-only app)? |
+| DQ_LATE_STAGE | Public company or clearly late-stage (IPO'd, Fortune 500 scale) | profile employee range starts above `late_stage_min_employees` | Is this company publicly listed (IPO'd), Fortune 500 scale, or clearly over 2,000 employees? |
+
+## Known competitors (disqualifier DQ_COMPLIANCE_VENDOR)
+> Also used by the scraper: a link to any of these domains (e.g. `trust.vanta.com`) is recorded as a
+> "competitor tool" signal.
+
+- vanta.com (Vanta)
+- drata.com (Drata)
+- secureframe.com (Secureframe)
+- scrut.io (Scrut Automation)
+- thoropass.com (Thoropass)
+- onetrust.com (OneTrust)
+- tugboatlogic.com (Tugboat Logic, part of OneTrust)
+- sprinto.com (Sprinto itself)
+
+## Sprinto's own domains
+> A prospect linking to these (typically a trust center at `app.sprinto.com/...`) is already a Sprinto
+> customer → DQ_SPRINTO_CUSTOMER, not the competitor penalty.
+
+- sprinto.com
+
+## Known Sprinto customers (disqualifier DQ_SPRINTO_CUSTOMER)
 > Add a domain here when you find it as a case study or logo on sprinto.com. The agent loop also runs a
-> web search for "<company> Sprinto" as a secondary check.
+> web search for "<company> Sprinto" as a secondary check for every company that scores 40 or more.
 
 - getastra.com (Astra Security, publicly listed as a Sprinto customer)
 
-## Scoring (0–100), applied only if no disqualifier
-| Signal | Points | Evidence that counts |
-|---|---|---|
-| Sells to enterprise / mid-market | 0–20 | Enterprise plan, "Book a demo", enterprise logos, SSO/SAML, sales-led pricing |
-| Handles customer data | 0–15 | Integrations with customer systems, stores PII/financial/health data, data processing language |
-| Compliance gap or in-progress signal | 0–25 | No trust/security page; "SOC 2 in progress / coming soon"; only GDPR page; has SOC 2 but not ISO (or vice-versa); security questionnaire mentions |
-| Stage fit: Series A–C | 0–15 | Funding news within ~24 months; ~30–500 employees |
-| Hiring signal | 0–15 | Open roles: security, compliance, GRC, IT, DevSecOps, enterprise AEs |
-| Geography pushing compliance | 0–10 | Sells to US (SOC 2) / EU-UK (GDPR, ISO) customers |
-| Already on a competitor | −20 | Vanta/Drata/Secureframe trust center or badge |
+## Rubric rows
+Each row's points are capped at its max (the penalty row is capped at −20). Row maxes add up to **100**.
+A row marked *critical* must not be completely unknown at the end, or the verdict is `insufficient_data`.
+
+| Row ID | Row | Max points | Critical |
+|---|---|---|---|
+| ENT | Sells to enterprise / mid-market | 20 | no |
+| DATA | Handles customer data | 15 | no |
+| GAP | Compliance gap or in-progress signal | 25 | yes |
+| STAGE | Stage fit: Series A–C | 15 | yes |
+| HIRING | Hiring signal | 15 | no |
+| GEO | Geography pushing compliance | 10 | no |
+| COMP | Already on a competitor (penalty) | 20 | no |
+
+## Scoring rules
+`Kind`: *presence* = the quote must show the thing exists; *absence* = the evidence points at the pages that were
+checked and found nothing (e.g., no trust page).
+
+| Rule ID | Row | Points | Kind | Question for the LLM (answer yes / no / unknown, with evidence) |
+|---|---|---|---|---|
+| ENT_PLAN | ENT | 8 | presence | Is there an "Enterprise" or custom-priced plan / tier? |
+| ENT_DEMO | ENT | 4 | presence | Is the buying motion sales-led ("Book a demo", "Talk to sales", "Contact sales")? |
+| ENT_LOGOS | ENT | 4 | presence | Does the site name mid-market or enterprise customers (logos, case studies)? |
+| ENT_SSO | ENT | 4 | presence | Does the product advertise SSO / SAML, role-based access, or audit logs? |
+| DATA_INTEGRATIONS | DATA | 5 | presence | Does the product connect to customers' own systems (CRM, ERP, HRIS, cloud, data warehouse, etc.)? |
+| DATA_SENSITIVE | DATA | 7 | presence | Does the product store or process customers' personal, financial or health data? |
+| DATA_DPA | DATA | 3 | presence | Is there a DPA, sub-processor list, or data-processing / privacy commitment for business customers? |
+| GAP_IN_PROGRESS | GAP | 12 | presence | Does the company say SOC 2 / ISO 27001 is "in progress", "coming soon" or planned? |
+| GAP_NO_TRUST_PAGE | GAP | 8 | absence | Is there NO trust center / security page and NO SOC 2 or ISO 27001 claim on the pages checked? |
+| GAP_ONE_FRAMEWORK | GAP | 8 | presence | Does the company hold exactly one of SOC 2 or ISO 27001 (room to add the second)? |
+| GAP_GDPR_ONLY | GAP | 8 | presence | Does the company mention GDPR but neither SOC 2 nor ISO 27001? |
+| GAP_QUESTIONNAIRE | GAP | 5 | presence | Does the company mention security questionnaires, security reviews or vendor assessments from its customers? |
+| STAGE_FUNDING | STAGE | 10 | presence | Did the company raise a Series A, B or C round within about the last 24 months? |
+| STAGE_SIZE | STAGE | 5 | presence | Does the company have roughly 30–500 employees? |
+| HIRING_SECURITY | HIRING | 10 | presence | Is the company hiring for security, compliance, GRC, IT or DevSecOps roles? |
+| HIRING_ENT_SALES | HIRING | 5 | presence | Is the company hiring enterprise / mid-market account executives or sales roles? |
+| GEO_US | GEO | 5 | presence | Does the company sell to US customers? |
+| GEO_EU_UK | GEO | 5 | presence | Does the company sell to EU or UK customers? |
+| COMP_ON_COMPETITOR | COMP | -20 | presence | Does the company use Vanta, Drata, Secureframe, Scrut, Thoropass or OneTrust (trust center, badge, "powered by")? |
 
 ## Verdicts
-- **≥ 60** → `qualified`
-- **40–59** → borderline: the agent loop gathers more evidence (max 3 iterations), then re-scores
-- **< 40** → `rejected`
-- If key fields (B2B? stage? compliance status?) are still unknown after the loop → `insufficient_data`
+| Setting | Value |
+|---|---|
+| qualified_min_score | 60 |
+| borderline_min_score | 40 |
+| late_stage_min_employees | 2000 |
+
+- Any disqualifier → `rejected`
+- Score **≥ qualified_min_score** and no critical row fully unknown → `qualified`
+- Score **between borderline_min_score and qualified_min_score**, or a critical row fully unknown, or B2B status unknown →
+  the agent loop gathers more evidence (max `MAX_AGENT_ITERATIONS`), then re-scores
+- After the loop: if even "every unknown rule = yes" could not reach qualified_min_score → `rejected`;
+  otherwise still a critical unknown → `insufficient_data`; otherwise score below qualified_min_score → `rejected`
+- Every company that scores ≥ borderline_min_score also gets one web search for "<company> Sprinto customer"
+  (secondary check for DQ_SPRINTO_CUSTOMER) before it can be `qualified`.
 
 Every point awarded must cite evidence `{claim, source_url, quote}`. No evidence, no points.
 
 ## Who is the right PoC (Step 4)
-| Company size | Preferred titles (in order) |
-|---|---|
-| < 150 employees | CTO → Co-founder/CEO → VP/Head of Engineering |
-| 150–500 | CISO / Head of Security → VP Engineering / CTO → Head of IT / Compliance |
-| Any size, fallback | Head of Ops / COO, then any `executive` seniority in IT/management |
+Python ranks Hunter contacts by `Priority` (1 = best) for the company's size band, then by Hunter confidence.
+A title matches if it contains any of the keywords (whole words, case-insensitive). `seniority:executive` means
+Hunter's seniority field is "executive". If the employee count is unknown, the `1-149` band is used.
+Contacts without a first name are never chosen. Contacts with confidence below `min_confidence` rank after
+all contacts at the same priority that meet it.
 
-Prefer Hunter `confidence ≥ 70` and `type=personal`. Record why the chosen person beat the others.
+| Size band | Priority | Title | Title keywords |
+|---|---|---|---|
+| 1-149 | 1 | CTO | cto, chief technology officer |
+| 1-149 | 2 | Co-founder / CEO | co founder, cofounder, founder, ceo, chief executive officer |
+| 1-149 | 3 | VP / Head of Engineering | vp engineering, vp of engineering, vice president engineering, vice president of engineering, head of engineering, director of engineering, engineering director |
+| 150-100000 | 1 | CISO / Head of Security | ciso, chief information security officer, head of security, vp security, vp of security, director of security, security lead |
+| 150-100000 | 2 | VP Engineering / CTO | vp engineering, vp of engineering, vice president of engineering, head of engineering, cto, chief technology officer |
+| 150-100000 | 3 | Head of IT / Compliance | head of it, it director, director of it, vp it, head of compliance, compliance manager, compliance lead, grc |
+| any | 4 | Head of Ops / COO | coo, chief operating officer, head of operations, vp operations, vp of operations, director of operations |
+| any | 5 | Any executive in IT / management | seniority:executive |
+
+| Setting | Value |
+|---|---|
+| min_confidence | 70 |
 
 ## Typical pain points by persona (Step 5 picks 2, grounded in evidence)
 - **CTO / Eng leader:** engineers pulled off roadmap to collect audit evidence; security questionnaires slowing deals.

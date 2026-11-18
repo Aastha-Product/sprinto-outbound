@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import logging
+import sys
 
 from rich.logging import RichHandler
 
 
 def setup_logging(level: int = logging.INFO) -> None:
     """Configure logging once. Also silences libraries that would log full request URLs."""
+    for stream in (sys.stdout, sys.stderr):  # Windows consoles: print ✅ / → without crashing
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     logging.basicConfig(
         level=level,
         format="%(message)s",

@@ -1,0 +1,8 @@
+{"data": {"domain": "acme.io", "organization": "Acme Cloud", "emails": [
+  {"value": "pat@acme.io", "type": "personal", "confidence": 95, "first_name": "Pat", "last_name": "Lee", "position": "Head of Marketing", "seniority": "executive", "department": "marketing"},
+  {"value": "sam@acme.io", "type": "personal", "confidence": 60, "first_name": "Sam", "last_name": "Rao", "position": "CTO", "seniority": "executive", "department": "executive"},
+  {"value": "alex@acme.io", "type": "personal", "confidence": 92, "first_name": "Alex", "last_name": "Kim", "position": "Co-Founder & CTO", "seniority": "executive", "department": "executive"},
+  {"value": "j.doe@acme.io", "type": "personal", "confidence": 99, "first_name": null, "last_name": "Doe", "position": "Chief Technology Officer", "seniority": "executive", "department": "it"},
+  {"value": "maria@acme.io", "type": "personal", "confidence": 88, "first_name": "Maria", "last_name": "Gomez", "position": "CEO", "seniority": "executive", "department": "executive"},
+  {"value": "dev@acme.io", "type": "personal", "confidence": 90, "first_name": "Dev", "last_name": "Shah", "position": "VP of Engineering", "seniority": "executive", "department": "it"}
+]}, "meta": {"results": 6, "limit": 10, "offset": 0}}

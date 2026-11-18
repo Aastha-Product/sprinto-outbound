@@ -71,13 +71,22 @@ class _Budget:
 _budget = _Budget()
 
 
-def start_domain(domain: str | None) -> None:
-    """Reset the LLM call counter. Call this once at the start of each domain."""
+def start_domain(domain: str | None, already_used: int = 0) -> None:
+    """Reset the LLM call counter at the start of a domain.
+
+    `already_used` lets the web app (one step per request) carry the count over from earlier steps,
+    so the per-domain limit holds across requests.
+    """
     _budget.start(domain)
+    _budget.used = already_used
 
 
 def calls_used() -> int:
     return _budget.used
+
+
+def calls_left() -> int:
+    return max(get_settings().max_llm_calls_per_domain - _budget.used, 0)
 
 
 # ---------------------------------------------------------------- prompts
@@ -150,19 +159,34 @@ def generate_json(
     Temperature 0 by default: the same input should give (nearly) the same answer.
     """
     settings = get_settings()
+    prompt = render_prompt(prompt_name, variables)  # fail on a bad prompt BEFORE spending budget
     _budget.spend(settings.max_llm_calls_per_domain)
-    prompt = render_prompt(prompt_name, variables)
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
-        response_schema=schema,
+        response_json_schema=llm_schema(schema),
         temperature=temperature,
     )
     response = _generate(prompt, config)
     text = response.text or ""
+    if not text.strip():
+        raise LLMError(f"Gemini returned an empty answer for '{prompt_name}' (possibly blocked by safety filters).")
     try:
         return schema.model_validate_json(text)
     except ValidationError as exc:
         raise LLMError(f"Gemini's answer for '{prompt_name}' did not match {schema.__name__}: {exc}") from exc
+
+
+def llm_schema(schema: type[BaseModel]) -> dict:
+    """The JSON schema we send to Gemini: pydantic's schema minus `default`s (not useful to the model)."""
+
+    def strip(node):
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k != "default"}
+        if isinstance(node, list):
+            return [strip(v) for v in node]
+        return node
+
+    return strip(schema.model_json_schema())
 
 
 def research_with_search(question: str) -> tuple[str, list[Citation]]:
@@ -175,8 +199,8 @@ def research_with_search(question: str) -> tuple[str, list[Citation]]:
     if not settings.use_search_grounding:
         log.warning("Search grounding is off (USE_SEARCH_GROUNDING=false); skipping web search.")
         return "", []
-    _budget.spend(settings.max_llm_calls_per_domain)
     prompt = render_prompt("research", {"question": question})
+    _budget.spend(settings.max_llm_calls_per_domain)
     config = types.GenerateContentConfig(
         tools=[types.Tool(google_search=types.GoogleSearch())],
         temperature=0.0,
