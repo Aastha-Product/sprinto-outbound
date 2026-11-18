@@ -63,6 +63,17 @@ Checked in this order. The list checks run in Python **before** any scoring call
 > web search for "<company> Sprinto" as a secondary check for every company that scores 40 or more.
 
 - getastra.com (Astra Security, publicly listed as a Sprinto customer)
+- fylehq.com (Fyle: case study sprinto.com/customers/fyle)
+- spendflo.com (Spendflo: Sprinto case study "multi standard compliance program for Spendflo")
+- recruitcrm.io (Recruit CRM: Sprinto case study; also links to a Sprinto-hosted trust center)
+- docsumo.com (Docsumo: logo on sprinto.com/solutions/startups)
+- everstage.com (Everstage: named on Sprinto's G2 listing as a customer)
+- spotdraft.com (SpotDraft: trust center "Powered by Sprinto", found by the agent loop on 2026-11-19)
+- hevodata.com (Hevo Data: privacy policy lists Sprinto for its trust center, found by the agent loop on 2026-11-19)
+
+> rocketlane.com is also a Sprinto customer (case study sprinto.com/rocketlane-case-study) but is deliberately
+> NOT listed: the scraper catches it from its own app.sprinto.com trust-center link, which shows the
+> link check working.
 
 ## Rubric rows
 Each row's points are capped at its max (the penalty row is capped at −20). Row maxes add up to **100**.
