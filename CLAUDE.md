@@ -46,7 +46,7 @@ why this person, why this wording) is explainable from saved artifacts.
   HTML/JS page in `web/`) that is a thin layer over the same functions; it must contain no business logic.
   (Streamlit was dropped because it cannot run on Vercel.)
 - Hosting: **Vercel** (Python/FastAPI, deployed from the public GitHub repo
-  `anshullmishra-png/sprinto-outbound`). Vercel requests time out, so the web UI runs **one step per request**
+  `agneshmp07/sprinto-outbound`). Vercel requests time out, so the web UI runs **one step per request**
   and stores each step's result before the next one starts.
 - Storage: **Neon Postgres** via `DATABASE_URL` (driver `psycopg`). `outbound/storage.py` is the only module that
   touches storage: `NeonStore` when `DATABASE_URL` is set, `FileStore` (`runs/`, `.cache/`) otherwise; tests use an
@@ -152,6 +152,6 @@ answering "why qualified / rejected", "why this person", "why this email". Also 
 - Don't change the stack, ICP, or guardrails silently. If something blocks you, ask.
 - Prefer small, readable functions with docstrings; the owner must be able to explain the code.
 - Tests must run offline (`pytest`) using fixtures; never hit real APIs in tests.
-- Git: Claude may commit and `git push` to `origin` (the owner's repo `anshullmishra-png/sprinto-outbound`) on
+- Git: Claude may commit and `git push` to `origin` (the owner's repo `agneshmp07/sprinto-outbound`) on
   branch `main`. Never force-push, never rewrite history, never push to any other remote.
 - Don't install global packages, don't delete files outside `runs/` and `.cache/` without asking.

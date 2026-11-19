@@ -36,7 +36,7 @@ questions, (3) the phase plan below confirmed or with suggested changes.
 **Done when:** `python scripts\list_models.py` lists models and `python scripts\check_setup.py` runs.
 
 ## Phase 0b: GitHub + Vercel + Neon skeleton (added later by owner's decision)
-- Public GitHub repo `anshullmishra-png/sprinto-outbound`; Claude may push to `main` (never force-push).
+- Public GitHub repo `agneshmp07/sprinto-outbound`; Claude may push to `main` (never force-push).
 - Minimal FastAPI `app.py` (`/` placeholder page, `/api/health`) so the Vercel link exists from day one.
 - Vercel project imported from GitHub; Neon added through Vercel → Storage (sets `DATABASE_URL` automatically).
 - `outbound/storage.py` is built in Phase 1 (first step that saves artifacts): NeonStore / FileStore / MemoryStore.
