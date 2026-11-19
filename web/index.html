@@ -1155,7 +1155,8 @@ function homePage() {
     el("h2", {"data-rv": ""}, "Your next qualified lead is ", el("em", {}, "one domain"), " away."),
     el("div", {"data-rv": "", style: "--d:150"}, magnet(el("a", {class: "btn lime lg", href: "#app"}, "Open the workspace", icon("i-arrow"))))));
   const foot = el("footer", {class: "site"}, el("div", {class: "wrap"},
-    el("span", {}, "Sprinto Outbound · a MESA School of Business student build (Term 2, AI Case 2). Role-play outreach; no prospect is ever emailed."),
+    el("span", {}, "Sprinto Outbound · a MESA School of Business student build (Term 2, AI Case 2). Role-play outreach; no prospect is ever emailed.",
+      el("br"), "Built by Agnesh · Minimal UI by Aastha Pandey"),
     el("a", {href: "https://github.com/agneshmp07/sprinto-outbound", target: "_blank", rel: "noopener"}, "Source on GitHub")));
 
   const sections = [scene, problem, how, trust, results];
