@@ -1,7 +1,8 @@
 """Step 7: send the email through the Gmail API, with every guardrail checked in order.
 
-The recipient is NEVER a parameter: this module always sends to OWNER_EMAIL from .env and re-checks
-it (`assert_recipient`) on the final message right before calling Gmail.
+The recipient is never a free-text address: callers pass an index into Settings.recipients()
+(OWNER_EMAIL first, then the TEST_RECIPIENTS the owner approved), and `assert_recipient` re-checks the
+final message against that list right before calling Gmail.
 
 Checks, in order (the first one that applies decides the outcome):
 1. Draft flagged by guards.py           -> blocked
@@ -36,9 +37,9 @@ def tagged_subject(subject: str, poc_email: str) -> str:
     return f"[TEST → {poc_email}] {subject}"
 
 
-def build_message(subject: str, body: str, settings: Settings) -> MIMEText:
+def build_message(subject: str, body: str, settings: Settings, to: str) -> MIMEText:
     msg = MIMEText(body, "plain", "utf-8")
-    msg["To"] = settings.owner_email
+    msg["To"] = to
     msg["From"] = formataddr((settings.sender_name, settings.owner_email))
     msg["Subject"] = subject
     return msg
@@ -76,11 +77,12 @@ def gmail_send(msg: MIMEText, settings: Settings) -> str:
 
 
 def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str, flagged: bool,
-               settings: Settings, store: Store, send_requested: bool, sender=None) -> SendResult:
-    """Step 7. `sender` is swappable so tests never touch Gmail."""
+               settings: Settings, store: Store, send_requested: bool, sender=None, recipient: int = 0) -> SendResult:
+    """Step 7. `sender` is swappable so tests never touch Gmail. `recipient` indexes Settings.recipients() (0 = owner)."""
     sender = sender or gmail_send
     full_subject = tagged_subject(subject, poc_email)
-    to = settings.owner_email
+    allowed = settings.recipients()
+    to = allowed[recipient] if 0 <= recipient < len(allowed) else ""
 
     def result(status: str, reason: str, msg_id: str | None = None) -> SendResult:
         return SendResult(status=status, to=to, would_have_gone_to=poc_email, subject=full_subject, gmail_message_id=msg_id, reason=reason)
@@ -91,6 +93,8 @@ def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str
         return result("dry_run", "dry run: no --send flag / Send button, nothing was sent")
     if not settings.send_enabled:
         return result("dry_run", "SEND_ENABLED is not true in .env, nothing was sent")
+    if not to:
+        return result("blocked", "that test recipient is not on the approved list")
     settings.require("gmail")
     already = store.sent_in_run(run_id)
     if domain in already:
@@ -100,9 +104,9 @@ def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str
     if store.sent_today() >= settings.max_emails_per_day:
         return result("blocked", f"MAX_EMAILS_PER_DAY ({settings.max_emails_per_day}) reached")
 
-    msg = build_message(full_subject, body, settings)
-    assert_recipient(msg["To"], settings.owner_email)  # final check, right before sending
+    msg = build_message(full_subject, body, settings, to)
+    assert_recipient(msg["To"], allowed)  # final check, right before sending
     msg_id = sender(msg, settings)
     store.log_event("send", run_id=run_id, domain=domain, status="sent")
-    log.info("[%s] sent to OWNER_EMAIL (Gmail id %s)", domain, msg_id)
-    return result("sent", "sent to OWNER_EMAIL only", msg_id)
+    log.info("[%s] sent to approved inbox #%d (Gmail id %s)", domain, recipient, msg_id)
+    return result("sent", "sent to the owner's inbox only" if recipient == 0 else "sent to an approved test inbox only", msg_id)

@@ -1366,19 +1366,22 @@ function reportPage(runId, domain) {
         try { await navigator.clipboard.writeText(text); toast("Email copied to clipboard"); }
         catch { toast("Couldn't copy automatically. Select the text instead."); }
       };
-      const sendBtn = el("button", {class: "btn sm"}, icon("i-send"), "Send a test to my inbox");
+      const inboxes = (health && health.test_recipients) || [];
+      const pick = inboxes.length > 1 ? el("select", {"aria-label": "Send the test email to"},
+        ...inboxes.map((label, i) => el("option", {value: String(i)}, i ? label : `${label} (owner)`))) : null;
+      const sendBtn = el("button", {class: "btn sm"}, icon("i-send"), pick ? "Send test email" : "Send a test to my inbox");
       sendBtn.onclick = async () => {
         sendBtn.disabled = true; sendBtn.textContent = "Sending…";
-        try { const out = await api(`/api/runs/${encodeURIComponent(runId)}/send`, {method: "POST", body: JSON.stringify({domain})});
+        try { const out = await api(`/api/runs/${encodeURIComponent(runId)}/send`, {method: "POST", body: JSON.stringify({domain, recipient: pick ? Number(pick.value) : 0})});
           if (out.artifact) r.artifacts[domain]["07_send"] = out.artifact; if (out.brief) r.briefs[domain] = out.brief;
-          toast(out.artifact && out.artifact.output && out.artifact.output.status === "sent" ? "Test email sent to your inbox" : "Not sent: " + ((out.artifact || {}).reasoning || "see details")); }
+          toast(out.artifact && out.artifact.output && out.artifact.output.status === "sent" ? (pick ? `Test email sent to ${pick.selectedOptions[0].textContent}` : "Test email sent to your inbox") : "Not sent: " + ((out.artifact || {}).reasoning || "see details")); }
         catch (e) { toast("Not sent: " + e.message); }
         route(); loadHealth();
       };
       const foot = mail.flagged ? el("div", {class: "mail-foot", style: "background:var(--red-bg);color:var(--red)"}, el("b", {}, "Can't be sent: "), (mail.problems || []).join("; "))
         : el("div", {class: "mail-foot"}, copyBtn,
             sent && sent.status === "sent" ? el("span", {class: "pill sent"}, icon("i-check"), "Test delivered to your inbox")
-              : health && health.send_enabled ? sendBtn : el("span", {class: "small muted"}, "Sending is switched off on this server."),
+              : health && health.send_enabled ? el("span", {style: "display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center"}, pick, sendBtn) : el("span", {class: "small muted"}, "Sending is switched off on this server."),
             sent && sent.status !== "sent" ? el("span", {class: "small muted"}, sent.reason || "") : null);
       parts.push(chapter(6, "What to say", "One verified hook, one pain point, one ask. Checked against the email rules before it can be sent.",
         el("div", {class: "cards2"},

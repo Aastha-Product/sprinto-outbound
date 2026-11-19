@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     owner_email: str = ""
     sender_name: str = "Agnesh"
     sender_title: str = "Growth at Sprinto"
+    # Extra approved inboxes for the website's "send test to" dropdown, comma-separated. OWNER_EMAIL is always first.
+    test_recipients: str = ""
 
     # Gemini
     gemini_api_key: SecretStr = SecretStr("")
@@ -81,6 +83,15 @@ class Settings(BaseSettings):
         """True if OWNER_EMAIL looks like a real address (not empty, not the placeholder)."""
         e = self.owner_email.strip()
         return bool(e) and e.lower() != PLACEHOLDER_EMAIL and bool(EMAIL_RE.match(e))
+
+    def recipients(self) -> list[str]:
+        """The only addresses step 7 may ever send to: OWNER_EMAIL first, then valid TEST_RECIPIENTS (no duplicates)."""
+        out = [self.owner_email.strip()] if self.owner_email_ok() else []
+        for e in self.test_recipients.split(","):
+            e = e.strip()
+            if EMAIL_RE.match(e) and e.lower() not in {x.lower() for x in out}:
+                out.append(e)
+        return out
 
     def missing_for(self, feature: str) -> list[str]:
         """Return the `.env` keys that are missing for one feature (empty list = all good)."""

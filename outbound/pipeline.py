@@ -52,6 +52,7 @@ class RunOptions:
     no_hunter: bool = False  # never spend a Hunter credit (cache only)
     use_cache: bool = True  # reuse cached scrapes
     skip_done: bool = False  # when continuing a run: reuse steps that already finished ('done')
+    recipient: int = 0  # step 7: index into Settings.recipients(); 0 = OWNER_EMAIL
 
 
 @dataclass
@@ -212,7 +213,7 @@ class DomainRunner:
         draft = self.output(6)
         contact: Contact = poc.chosen  # type: ignore[assignment]
         result = send_email(self.run_id, self.domain, draft["draft"]["subject"], draft["full_body"], contact.email, draft["flagged"],
-                            self.settings, self.store, send_requested=self.options.send)
+                            self.settings, self.store, send_requested=self.options.send, recipient=self.options.recipient)
         status = "done" if result.status in ("sent", "dry_run") else "stopped"
         art = self._save(7, status, f"draft for {self.domain}", result.model_dump(mode="json"), result.reason)
         return StepOutcome(7, status, f"{result.status}: {result.reason}", art)

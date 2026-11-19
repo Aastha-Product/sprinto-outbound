@@ -80,12 +80,13 @@ def test_needs_a_question():
 
 
 # ---------------------------------------------------------------- recipient lock + send step
-def test_assert_recipient_only_allows_owner():
-    assert_recipient("Me@Example.com", "me@example.com")
+def test_assert_recipient_only_allows_approved_inboxes():
+    assert_recipient("Me@Example.com", ["me@example.com"])
+    assert_recipient("prof@school.edu", ["me@example.com", "prof@school.edu"])
     with pytest.raises(RecipientError):
-        assert_recipient("alex@acme.io", "me@example.com")
+        assert_recipient("alex@acme.io", ["me@example.com"])
     with pytest.raises(RecipientError):
-        assert_recipient("me@example.com", "")
+        assert_recipient("me@example.com", [])
 
 
 def sset(**kw):
@@ -132,3 +133,18 @@ def test_daily_cap():
     store, s = MemoryStore(), sset(send_enabled=True, max_emails_per_run=10, max_emails_per_day=1)
     assert send(store, s, "a.io").status == "sent"
     assert "MAX_EMAILS_PER_DAY" in send(store, s, "b.io").reason
+
+
+def test_test_recipients_list_and_index():
+    s = sset(send_enabled=True, test_recipients="prof@school.edu, not-an-email, ME@example.com")
+    assert s.recipients() == ["me@example.com", "prof@school.edu"]  # owner first, invalid + duplicate dropped
+    box = []
+
+    def fake_sender(msg, _):
+        box.append(msg)
+        return "id"
+
+    r = send_email("run1", "acme.io", "Subject", "Body?", "alex@acme.io", False, s, MemoryStore(), True, sender=fake_sender, recipient=1)
+    assert r.status == "sent" and box[0]["To"] == "prof@school.edu"
+    r = send_email("run2", "acme.io", "Subject", "Body?", "alex@acme.io", False, s, MemoryStore(), True, sender=fake_sender, recipient=7)
+    assert r.status == "blocked" and len(box) == 1  # an index outside the list never sends

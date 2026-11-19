@@ -88,15 +88,17 @@ answering "why qualified / rejected", "why this person", "why this email". Also 
 
 ## GUARDRAILS (non-negotiable)
 **Email safety**
-- The `to:` address is ALWAYS `OWNER_EMAIL` from `.env`. `send.py` must assert this right before sending
-  and refuse otherwise. Never accept a recipient from the LLM, Hunter, CLI args, or the UI.
+- The `to:` address is ALWAYS an approved inbox: `OWNER_EMAIL`, or one of the owner-set `TEST_RECIPIENTS`
+  (owner's choice, so visitors can test with their own inbox). `send.py` must assert this right before sending
+  and refuse otherwise. The UI sends only an index into that list (shown masked), never an address. Never accept
+  a free-text recipient from the LLM, Hunter, CLI args, or the UI. The CLI always sends to `OWNER_EMAIL`.
 - Default is **dry-run**: drafts saved to `runs/`, nothing sent. Sending requires the `--send` CLI flag
   (or the explicit "Send" button in the UI) AND `SEND_ENABLED=true` in `.env`.
 - Hard cap: `MAX_EMAILS_PER_RUN` (default 3). Never send the same domain twice in one run.
 - Subject is prefixed `[TEST → {poc_email}]` so the owner sees who it *would* have gone to.
 - Gmail scope is `gmail.send` only. Never request read/modify scopes.
 - **Public website (open to anyone, by owner's choice):** the web "Send" button follows the same rules
-  (recipient locked to `OWNER_EMAIL`, `SEND_ENABLED=true` required) plus `MAX_EMAILS_PER_DAY` (default 5),
+  (recipient picked from the approved list, `SEND_ENABLED=true` required) plus `MAX_EMAILS_PER_DAY` (default 5),
   counted in the Neon send log across all visitors.
 
 **Public website safety (anyone can run it)**
