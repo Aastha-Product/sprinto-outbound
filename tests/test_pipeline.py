@@ -95,7 +95,7 @@ def test_full_pipeline_dry_run(setup):
     assert run["04_poc"]["output"]["chosen"]["first_name"] == "Alex"
     assert len(run["05_pain"]["output"]) == 2
     assert run["06_email"]["output"]["flagged"] is False
-    assert run["06_email"]["output"]["full_body"].endswith("Anshull Mishra\nGrowth at Sprinto")
+    assert run["06_email"]["output"]["full_body"].endswith("Agnesh\nGrowth at Sprinto")
     assert run["07_send"]["output"]["status"] == "dry_run" and sent == []
     assert run["07_send"]["llm_calls_used"] <= settings.max_llm_calls_per_domain
     assert "Would go to: Alex" in store.load_run_file("r1", "acme.io/06_email.txt")

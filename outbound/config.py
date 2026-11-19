@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     # Owner / sender
     owner_email: str = ""
-    sender_name: str = "Anshull Mishra"
+    sender_name: str = "Agnesh"
     sender_title: str = "Growth at Sprinto"
 
     # Gemini

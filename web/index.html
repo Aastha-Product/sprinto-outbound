@@ -36,7 +36,7 @@
   a { color: inherit; } a:hover { color: var(--lime); }
   h1, h2, h3, .display { font-family: var(--display); color: var(--text); margin: 0; text-wrap: balance; letter-spacing: -0.02em; font-weight: 600; }
   em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -.01em; }
-  h1 em, h2 em, .grad { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .06em; }
+  h1 em, h2 em { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: .06em; }
   p { margin: 0; }
   code { font: 12.5px var(--mono); background: var(--surface-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; }
   :focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; border-radius: 6px; }
@@ -120,36 +120,32 @@
   /* ============================== homepage */
   .hero { position: relative; isolation: isolate; overflow: hidden; min-height: calc(100svh - 68px); display: flex; align-items: center; padding-block: 48px 120px; }
   .hero.glow::before { z-index: -1; opacity: 1; background: radial-gradient(700px circle at var(--mx, 70%) var(--my, 30%), rgba(200,243,107,.07), transparent 55%); }
-  .aurora { position: absolute; inset: -20%; z-index: -2; filter: blur(90px) saturate(140%); opacity: .55; pointer-events: none; }
+  .aurora { position: absolute; inset: -20%; z-index: -2; opacity: .75; contain: strict; /* soft radial gradients; a live blur filter here cost most of each frame */ pointer-events: none; }
   .aurora i { position: absolute; border-radius: 50%; animation: drift 24s ease-in-out infinite alternate; }
-  .aurora i:nth-child(1) { width: 44vw; height: 44vw; left: 6%; top: 8%; background: radial-gradient(circle, rgba(200,243,107,.45), transparent 65%); }
-  .aurora i:nth-child(2) { width: 38vw; height: 38vw; right: 4%; top: 18%; background: radial-gradient(circle, rgba(110,231,210,.4), transparent 65%); animation-delay: -8s; animation-duration: 28s; }
-  .aurora i:nth-child(3) { width: 34vw; height: 34vw; left: 38%; bottom: 0; background: radial-gradient(circle, rgba(124,108,255,.28), transparent 65%); animation-delay: -14s; animation-duration: 32s; }
+  .aurora i:nth-child(1) { width: 44vw; height: 44vw; left: 6%; top: 8%; background: radial-gradient(circle, rgba(200,243,107,.32), rgba(200,243,107,.08) 40%, transparent 68%); }
+  .aurora i:nth-child(2) { width: 38vw; height: 38vw; right: 4%; top: 18%; background: radial-gradient(circle, rgba(110,231,210,.28), rgba(110,231,210,.07) 40%, transparent 68%); animation-delay: -8s; animation-duration: 28s; }
+  .aurora i:nth-child(3) { width: 34vw; height: 34vw; left: 38%; bottom: 0; background: radial-gradient(circle, rgba(124,108,255,.2), rgba(124,108,255,.05) 40%, transparent 68%); animation-delay: -14s; animation-duration: 32s; }
   @keyframes drift { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(6vw, -5vh) scale(1.15); } 100% { transform: translate(-5vw, 6vh) scale(.92); } }
   .gridlines { position: absolute; inset: 0; z-index: -1; pointer-events: none; background-size: 72px 72px;
     background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
     -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 15%, transparent 75%); mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 15%, transparent 75%); }
   .hero-grid { display: grid; gap: 64px; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); align-items: center; width: 100%; }
   @media (max-width: 980px) { .hero-grid { grid-template-columns: 1fr; gap: 56px; } }
-  .hero-copy, .hero-visual { will-change: transform; }
   .badge { display: inline-flex; gap: 10px; align-items: center; padding: 7px 14px 7px 10px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); font: 500 13px var(--body); color: var(--text-2); }
-  .live { width: 8px; height: 8px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 0 rgba(200,243,107,.6); animation: ping 1.8s var(--ease) infinite; }
-  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(200,243,107,.55); } 100% { box-shadow: 0 0 0 10px rgba(200,243,107,0); } }
+  .live { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--lime); flex: none; }
+  /* the pulse ring grows with transform + opacity only: an animated box-shadow repainted the page every frame */
+  .live::after, .pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: ping 1.8s var(--ease) infinite; will-change: transform, opacity; }
+  @keyframes ping { from { transform: scale(1); opacity: .55; } to { transform: scale(2.6); opacity: 0; } }
+  .zooming .hero .live::after, .zooming .hero .pulse::after { animation: none; display: none; } /* would re-raster at every zoom step */
   .hero h1 { font-size: clamp(46px, 6.4vw, 92px); line-height: .98; letter-spacing: -.045em; margin: 24px 0 26px; }
   .hero .lede { font-size: clamp(17px, 1.4vw, 20px); color: var(--text-2); max-width: 32em; }
   .hero .ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 36px; }
   .hero-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 30px; font-size: 14px; color: var(--muted); }
   .hero-meta span { display: inline-flex; gap: 8px; align-items: center; } .hero-meta .icon { color: var(--lime); width: 16px; height: 16px; }
-  .cue { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: grid; justify-items: center; gap: 10px; text-decoration: none;
-         font: 500 11px var(--body); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); transition: opacity .4s; }
-  .cue i { position: relative; width: 1px; height: 46px; background: var(--line-2); overflow: hidden; }
-  .cue i::after { content: ""; position: absolute; left: 0; top: -16px; width: 1px; height: 16px; background: var(--lime); animation: cue 2s var(--ease) infinite; }
-  @keyframes cue { to { transform: translateY(62px); } }
-  @media (max-height: 640px) { .cue { display: none; } }
   .hero-visual { perspective: 1400px; }
   .tilt { position: relative; transform-style: preserve-3d; transition: transform .7s var(--ease); }
   .demo { position: relative; border-radius: 26px; padding: 28px; border: 1px solid var(--line-2);
-          background: linear-gradient(160deg, rgba(24,30,39,.92), rgba(9,12,17,.94)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+          background: linear-gradient(160deg, rgba(24,30,39,.97), rgba(9,12,17,.98));
           box-shadow: 0 60px 140px -50px rgba(0,0,0,.9), 0 0 90px -40px rgba(200,243,107,.35), inset 0 1px 0 rgba(255,255,255,.07); }
   .demo.intro { animation-name: introCard; animation-duration: 1.6s; }
   @keyframes introCard { from { opacity: 0; transform: translateY(50px) scale(.94) rotateX(10deg); filter: blur(12px); } }
@@ -157,7 +153,7 @@
   .demo-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
   .demo h3 { font-size: 30px; letter-spacing: -.03em; }
   .float { position: absolute; z-index: 2; display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; border-radius: 14px; font: 500 13px var(--body); color: var(--text);
-           background: rgba(14,18,24,.88); border: 1px solid var(--line-2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+           background: rgba(14,18,24,.95); border: 1px solid var(--line-2);
            box-shadow: 0 24px 50px -20px rgba(0,0,0,.9); transform: translateZ(60px); animation: bob 7s ease-in-out infinite; white-space: nowrap; }
   .float.f1 { top: -22px; right: -18px; } .float.f2 { bottom: 76px; left: -54px; animation-delay: -2.4s; } .float.f3 { bottom: -22px; right: 32px; animation-delay: -4.6s; font-family: var(--mono); font-size: 12px; }
   @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
@@ -240,7 +236,7 @@
   .scene.on .mbar i { width: var(--w); transition-delay: calc(var(--i, 0) * 120ms + 450ms); }
   .agent { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 13.5px; }
   .agent .delta { margin-left: auto; }
-  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); animation: ping 1.6s var(--ease) infinite; flex: none; }
+  .pulse { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex: none; }
   .buyer { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
   .buyer .pill { margin-left: auto; }
   .avatar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--dark); font: 700 16px var(--display); flex: none; }
@@ -269,18 +265,50 @@
   .bigstat { font: 600 clamp(88px, 12vw, 172px)/.9 var(--display); letter-spacing: -.055em; font-variant-numeric: tabular-nums;
              background: linear-gradient(180deg, var(--text) 30%, rgba(242,244,238,.35)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
-  .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-  .tile { display: flex; flex-direction: column; gap: 10px; min-height: 230px; padding: 28px; border-radius: 26px; border: 1px solid var(--line); text-decoration: none; color: var(--text); overflow: hidden;
-          background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.012)); transition: border-color .4s, transform .6s var(--ease), box-shadow .6s var(--ease); }
-  .tile:hover { color: var(--text); border-color: rgba(200,243,107,.35); transform: translateY(-6px); box-shadow: 0 40px 80px -40px rgba(0,0,0,.9), 0 0 60px -30px rgba(200,243,107,.35); }
-  .tile.big { grid-column: span 2; background: radial-gradient(120% 140% at 0% 0%, rgba(200,243,107,.17), transparent 50%), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)); }
-  .tile .tn2 { font: 500 12.5px var(--mono); color: var(--muted); }
-  .tile h3 { font-size: 26px; line-height: 1.08; letter-spacing: -.03em; margin-top: auto; } .tile.big h3 { font-size: clamp(30px, 3.2vw, 44px); }
-  .tile p { color: var(--text-2); font-size: 15px; max-width: 32em; }
-  .tile .go { position: absolute; top: 22px; right: 22px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-2); display: grid; place-items: center;
-              transition: transform .6s var(--ease), background .3s, color .3s, border-color .3s; }
-  .tile:hover .go { transform: rotate(-45deg); background: var(--lime); color: var(--dark); border-color: var(--lime); }
-  @media (max-width: 900px) { .tiles { grid-template-columns: 1fr; } .tile.big { grid-column: auto; } }
+  /* portal scene: the hero is pinned; scrolling flies the camera into the demo card, which opens into the "inside" room */
+  .pscene { position: relative; height: 300vh; margin-top: -68px; }
+  .pscene-stage { position: sticky; top: 0; height: 100vh; overflow: hidden; background: var(--bg); }
+  .pscene .hero { height: 100%; min-height: 0; padding-block: 68px 40px; }
+  .hero-grid { will-change: transform, opacity; }
+  .inside { position: absolute; inset: 0; z-index: 3; opacity: 0; pointer-events: none; overflow: hidden; transform-origin: 0 0; will-change: transform, opacity; }
+  .inside-view { position: absolute; inset: 0; display: grid; place-items: center; transform-origin: 0 0; will-change: transform; }
+  .inside-bg { position: absolute; inset: 0;
+    background: radial-gradient(70% 60% at 50% 35%, rgba(200,243,107,.13), transparent 70%), radial-gradient(45% 50% at 88% 92%, rgba(110,231,210,.12), transparent 70%), linear-gradient(160deg, #161C25, #07090C); }
+  .inside-bg::after { content: ""; position: absolute; inset: 0; background-size: 72px 72px;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 10%, transparent 75%); mask-image: radial-gradient(ellipse 70% 60% at 50% 45%, #000 10%, transparent 75%); }
+  .inside-inner { position: relative; width: 100%; padding-top: 68px; transform-origin: 50% 50%; will-change: transform; }
+  .inside-head { text-align: center; margin-bottom: 36px; }
+  .inside-head h2 { font-size: clamp(36px, 5vw, 72px); line-height: 1; letter-spacing: -.045em; margin-top: 14px; }
+  .doors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .door { contain: layout paint; display: flex; flex-direction: column; gap: 8px; min-height: 176px; padding: 26px; border-radius: 22px; text-decoration: none; color: var(--text); overflow: hidden;
+          border: 1px solid var(--line-2); background: linear-gradient(160deg, rgba(30,37,47,.85), rgba(12,15,20,.9)); will-change: transform, opacity;
+          box-shadow: 0 40px 90px -45px rgba(0,0,0,.95), inset 0 1px 0 rgba(255,255,255,.07); transition: border-color .4s, box-shadow .5s var(--ease), background .4s; }
+  .door:hover { color: var(--text); border-color: rgba(200,243,107,.55); box-shadow: 0 40px 90px -45px rgba(0,0,0,.95), 0 0 70px -25px rgba(200,243,107,.55); }
+  .door .tn2 { font: 500 12.5px var(--mono); color: var(--lime); }
+  .door h3 { font-size: clamp(22px, 2vw, 28px); line-height: 1.08; letter-spacing: -.03em; }
+  .door p { color: var(--text-2); font-size: 14.5px; }
+  .door .open { display: inline-flex; gap: 8px; align-items: center; margin-top: auto; font: 600 14px var(--body); color: var(--lime); }
+  .door .open .icon { transition: transform .5s var(--ease); } .door:hover .open .icon { transform: translateX(5px); }
+  .zoom-guide { position: absolute; z-index: 5; right: max(24px, calc((100vw - 1200px) / 2 + 24px)); bottom: 26px; display: inline-flex; gap: 10px; align-items: center;
+                padding: 10px 16px; border-radius: 999px; background: rgba(14,18,24,.86); border: 1px solid var(--line-2); font: 500 13px var(--body); color: var(--text);
+                text-decoration: none; white-space: nowrap; box-shadow: 0 16px 40px -16px #000; }
+  .zoom-guide:hover { color: var(--text); border-color: rgba(200,243,107,.45); }
+  .zg-bar { width: 64px; height: 3px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .zg-bar i { display: block; height: 100%; background: var(--grad); transform-origin: 0 50%; transform: scaleX(0); }
+  .flat .zoom-guide { display: none; }
+  @media (max-width: 760px) { .zoom-guide { right: auto; left: 50%; transform: translateX(-50%); } }
+  .tour-hole.clear, .tour-hole.clear.center { box-shadow: none; } .tour-hole.clear::after { display: none; }
+  @media (max-height: 780px) { .door p { display: none; } .door { min-height: 0; } .inside-head { margin-bottom: 24px; } }
+  @media (max-width: 760px) {
+    .pscene .hero-visual { display: none; }
+    .doors { grid-template-columns: 1fr 1fr; gap: 10px; } .door { padding: 16px; min-height: 0; border-radius: 16px; } .door p { display: none; } .door h3 { font-size: 18px; }
+    .inside-head { margin-bottom: 20px; }
+  }
+  /* reduced motion: no pinning or zoom, the doors are a normal section under the hero */
+  .pscene.flat { height: auto; margin-top: 0; } .flat .pscene-stage { position: relative; height: auto; overflow: visible; }
+  .flat .hero { height: auto; min-height: calc(100svh - 68px); padding-top: 48px; }
+  .flat .inside { position: relative; opacity: 1; transform: none; pointer-events: auto; } .flat .inside-view { position: relative; padding: 96px 0; transform: none; }
 
   .cta-band { position: relative; isolation: isolate; overflow: hidden; text-align: center; padding-block: clamp(120px, 16vw, 220px); border-top: 1px solid var(--line); }
   .cta-band .aurora { opacity: .4; }
@@ -457,7 +485,6 @@
   .toast .dot { background: var(--lime); box-shadow: 0 0 10px rgba(200,243,107,.7); }
   .banner { border-radius: 16px; padding: 16px 20px; display: grid; gap: 6px; }
   .banner.err { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,143,128,.25); }
-  .banner.info { background: var(--surface); border: 1px solid var(--line); }
   .skeleton { height: 120px; border-radius: 20px; background: linear-gradient(90deg, rgba(255,255,255,.03) 0%, rgba(255,255,255,.075) 50%, rgba(255,255,255,.03) 100%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
   @keyframes shimmer { to { background-position: -200% 0; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } html { scroll-behavior: auto; } }
@@ -621,6 +648,19 @@ function magnet(n) {
 // headline words that slide up out of a mask; `start` continues the stagger across fragments
 const words = (text, start = 0) => text.split(" ").flatMap((w, i) => [i ? " " : null, el("span", {class: "w"}, el("span", {style: `--i:${start + i}`}, w))]).filter(Boolean);
 
+// eased programmatic scroll, used by "Explore" and the tour so the zoom plays out slowly
+let playZoom = null, glideId = 0;
+const stopGlide = () => { glideId++; };
+function glide(toY, ms = 2200) {
+  if (calm) { scrollTo(0, toY); return; }
+  const from = scrollY, t0 = performance.now(), id = ++glideId;
+  const step = now => { if (id !== glideId) return; // cancelled by the user or a newer glide
+    const k = Math.min(1, (now - t0) / ms), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    scrollTo(0, from + (toY - from) * e); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+addEventListener("wheel", stopGlide, {passive: true}); addEventListener("touchstart", stopGlide, {passive: true});
+
 // ============================================================================================= guided tour
 // A spotlight walks through `steps` ({sel, title, body, done?, go?}); steps whose target isn't visible are skipped.
 function tour(key, steps) {
@@ -643,13 +683,16 @@ function tour(key, steps) {
     h.textContent = s.title; p.textContent = s.body; bar.style.width = `${(i + 1) / list.length * 100}%`;
     back.disabled = i === 0; next.textContent = i === list.length - 1 ? (s.done || "Finish") : "Next";
     body.classList.remove("swap"); void body.offsetWidth; body.classList.add("swap");
-    const t = find(s);
+    stopGlide();
+    if (s.run) s.run();
+    hole.classList.toggle("clear", s.dim === false);
+    const t = s.run ? null : find(s);
     if (t) { const r = t.getBoundingClientRect();
       if (r.top < 84 || r.bottom > innerHeight - 24) t.scrollIntoView({behavior: calm ? "auto" : "smooth", block: r.height > innerHeight * .6 ? "start" : "center"}); }
     next.focus({preventScroll: true});
   }
   function frame() { // the spotlight eases toward its target every frame, so it also follows scrolling
-    const t = find(list[i]), vw = innerWidth, vh = innerHeight, pad = 10;
+    const t = list[i].sel && !list[i].run ? find(list[i]) : null, vw = innerWidth, vh = innerHeight, pad = 10;
     const r = t && t.getBoundingClientRect();
     const tgt = t ? {x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2} : {x: vw / 2, y: vh / 2, w: 0, h: 0};
     cur = cur ? Object.fromEntries(Object.keys(tgt).map(q => [q, cur[q] + (tgt[q] - cur[q]) * (calm ? 1 : .16)])) : tgt;
@@ -657,7 +700,8 @@ function tour(key, steps) {
     hole.classList.toggle("center", !t);
     const cw = card.offsetWidth, ch = card.offsetHeight, gap = 18;
     let x, y;
-    if (!t) { x = (vw - cw) / 2; y = (vh - ch) / 2; }
+    if (!t && list[i].dock) { x = (vw - cw) / 2; y = vh - ch - 84; }
+    else if (!t) { x = (vw - cw) / 2; y = (vh - ch) / 2; }
     else if (vw < 640) { x = (vw - cw) / 2; y = vh - ch - 16; } // phones: dock at the bottom
     else { // below, else above, else beside (tall targets), else docked at the bottom
       const cx = Math.min(Math.max(cur.x, 16), vw - cw - 16), cy = Math.min(Math.max(cur.y + cur.h / 2 - ch / 2, 16), vh - ch - 16);
@@ -684,11 +728,11 @@ function tour(key, steps) {
 }
 const HOME_TOUR = [
   {title: "Welcome to Sprinto Outbound", body: "This site turns a list of company domains into researched, scored prospects and a personalised first email, with a source behind every decision. Here's a 40-second tour."},
-  {sel: "#demo", title: "A real result, live", body: "Pulled from the latest qualified company: its ICP score, why now, the buyer we found, and whether the draft is ready."},
+  {sel: "#demo", title: "A real result, and your way in", body: "Pulled from the latest qualified company: its ICP score, why now, the buyer and the draft. This card is also a door. Press Next to watch it open."},
+  {dim: false, dock: true, run: () => playZoom && playZoom(), title: "Zooming inside", body: "Scrolling flies you into the card. It opens like a window, and inside are all six options: research, the latest report, how it works, scoring, history and system health. The pill at the bottom narrates the zoom whenever you scroll."},
   {sel: ["#how .stage", "#how .section-head"], title: "Three phases, one pipeline", body: "Discover reads the company's own website. Evaluate scores it against Sprinto's ICP, and an agent researches further when facts are missing. Reach finds the buyer and drafts the email. Scroll here to watch each phase play out."},
   {sel: "#trust .trust", title: "Why you can trust it", body: "No quote, no points. Unknown facts are flagged, never guessed. Test emails only ever reach the owner's inbox."},
   {sel: "#results .results", title: "Results from real runs", body: "Live numbers from every company researched so far. Most don't qualify, and each rejection has a stated reason."},
-  {sel: "#explore .tiles", title: "Explore further", body: "Jump straight into research, past runs, the scoring rules or system health."},
   {sel: "#nav-cta", title: "Ready to try it?", body: "Open the workspace and paste a few domains, or load the sample list.", done: "Open the workspace", go: "#app"},
 ];
 const WS_TOUR = [
@@ -717,11 +761,13 @@ function route() {
   document.title = parts[0] === "app" ? "Workspace · Sprinto Outbound" : "Sprinto Outbound";
   requestAnimationFrame(runFx);
 }
-let lastHash = location.hash;
+let lastHash = location.hash, homeY = 0;
+const isHome = h => !h.replace(/^#\/?/, "").startsWith("app");
 window.addEventListener("hashchange", () => {
   const sameReport = location.hash.split("/").slice(0, 2).join("/") === lastHash.split("/").slice(0, 2).join("/") && location.hash.startsWith("#app/report");
+  if (isHome(lastHash)) homeY = scrollY; // remember the homepage position before leaving it
   lastHash = location.hash; animateNext = true; route();
-  if (!sameReport) window.scrollTo({top: 0, behavior: "instant"});
+  if (!sameReport) window.scrollTo({top: isHome(location.hash) ? homeY : 0, behavior: "instant"});
 });
 function rerenderIf(kind, id) {
   const p = location.hash.replace(/^#\/?/, "").split("/").map(decodeURIComponent);
@@ -731,10 +777,10 @@ function rerenderIf(kind, id) {
 // ============================================================================================= homepage
 const jump = id => e => { e.preventDefault(); document.getElementById(id).scrollIntoView(); };
 function homePage() {
-  const SECTIONS = [["top", "Intro"], ["problem", "The problem"], ["how", "How it works"], ["trust", "Why trust it"], ["results", "Results"], ["explore", "Explore"]];
+  const SECTIONS = [["top", "Intro"], ["problem", "The problem"], ["how", "How it works"], ["trust", "Why trust it"], ["results", "Results"]];
   const top = el("header", {class: "topbar"}, el("div", {class: "wrap"},
     el("a", {class: "wordmark", href: "#/", onclick: jump("top"), "aria-label": "Sprinto Outbound"}, el("i"), el("span", {class: "wm-t"}, "SPRINTO OUTBOUND")),
-    el("nav", {class: "topnav home", "aria-label": "Site"}, ...SECTIONS.slice(2).map(([id, t]) => el("a", {href: "#" + id, onclick: jump(id)}, t))),
+    el("nav", {class: "topnav home", "aria-label": "Site"}, el("a", {href: "#top", onclick: e => { e.preventDefault(); goInside(); }}, "Explore"), ...SECTIONS.slice(2).map(([id, t]) => el("a", {href: "#" + id, onclick: jump(id)}, t))),
     el("div", {class: "right"},
       el("button", {class: "btn ghost sm hide-sm", type: "button", onclick: () => tour("toured", HOME_TOUR)}, icon("i-compass"), "Tour"),
       el("a", {class: "btn lime sm", id: "nav-cta", href: "#app"}, "Open workspace", icon("i-arrow")))));
@@ -762,16 +808,98 @@ function homePage() {
       magnet(el("a", {class: "btn lime", href: "#app"}, "Explore the workspace", icon("i-arrow"))),
       el("button", {class: "btn ghost", type: "button", onclick: () => tour("toured", HOME_TOUR)}, icon("i-compass"), "Take the 40-second tour")),
     el("div", {class: "hero-meta intro", style: "--d:850"}, ...["Every fact quoted", "20 ICP criteria", "No prospect ever emailed"].map(t => el("span", {}, icon("i-check"), t))));
-  const cue = el("a", {class: "cue", href: "#problem", onclick: jump("problem")}, el("span", {}, "Scroll to explore"), el("i"));
-  const hero = el("section", {class: "hero glow", id: "top"},
-    el("div", {class: "aurora", "aria-hidden": "true"}, el("i"), el("i"), el("i")), el("div", {class: "gridlines", "aria-hidden": "true"}),
-    el("div", {class: "wrap hero-grid"}, copy, visual), cue);
-  if (!calm) fx.push(() => {
-    const y = scrollY; if (y > innerHeight * 1.3) return;
-    copy.style.transform = `translate3d(0, ${y * .16}px, 0)`; copy.style.opacity = String(Math.max(0, 1 - y / (innerHeight * .8)));
-    visual.style.transform = `translate3d(0, ${y * -.07}px, 0)`;
-    cue.style.opacity = String(Math.max(0, 1 - y / 120));
-  });
+  const guideText = el("span", {}, "Scroll to zoom inside"), guideBar = el("i");
+  const guide = el("a", {class: "zoom-guide", href: "#top", onclick: e => { e.preventDefault(); goInside(); }}, el("span", {class: "live"}), guideText, el("span", {class: "zg-bar"}, guideBar));
+  const heroGrid = el("div", {class: "wrap hero-grid"}, copy, visual);
+  const aurora = el("div", {class: "aurora", "aria-hidden": "true"}, el("i"), el("i"), el("i"));
+  const hero = el("section", {class: "hero glow"}, aurora, el("div", {class: "gridlines", "aria-hidden": "true"}), heroGrid);
+
+  // ----- inside: the room behind the card, with every option laid out as a door
+  const DOORS = [
+    ["01", "Research companies", "Paste up to 10 domains and watch each one get read, scored and matched to a buyer.", "#app"],
+    ["02", "Latest decision report", "Why a company qualified, who to contact and why this wording, with a source for every line.", "#app"],
+    ["03", "How it works", "Discover, Evaluate, Reach: the whole pipeline, step by step.", "#how"],
+    ["04", "ICP & scoring", "The 20 criteria and the instant disqualifiers, read live from docs/ICP.md.", "#app/icp"],
+    ["05", "Run history", "Every past run with its verdicts, so you can reopen any company's evidence.", "#app/history"],
+    ["06", "System & guardrails", "Services, daily quotas and every safety limit. No secrets shown.", "#app/system"],
+  ];
+  const doors = DOORS.map(([n, t, d, href]) => el("a", {class: "door glow", href, onclick: href === "#how" ? jump("how") : null},
+    el("span", {class: "tn2"}, n), el("h3", {}, t), el("p", {}, d), el("span", {class: "open"}, "Open", icon("i-arrow"))));
+  const reportTile = doors[1];
+  doors.forEach(n => n.addEventListener("focus", () => { if (!calm && +(n.style.opacity || 0) < .8) scrollTo(0, scene.offsetTop + (scene.offsetHeight - innerHeight) * .8); }));
+  const insideHead = el("div", {class: "inside-head"}, el("div", {class: "eyebrow"}, "You're inside"), el("h2", {}, "Where do you ", el("em", {}, "want to go?")));
+  const insideInner = el("div", {class: "inside-inner wrap"}, insideHead, el("div", {class: "doors"}, ...doors));
+  const insideView = el("div", {class: "inside-view"}, el("div", {class: "inside-bg", "aria-hidden": "true"}), insideInner);
+  const inside = el("div", {class: "inside"}, insideView);
+  const scene = el("section", {class: "pscene" + (calm ? " flat" : ""), id: "top"}, el("div", {class: "pscene-stage"}, hero, inside, guide));
+  const goInside = () => glide(scene.offsetTop + (scene.offsetHeight - innerHeight) * .8);
+  playZoom = goInside;
+
+  // Scroll drives one progress value p (0..1), smoothed so the motion glides. Phases:
+  //   0.02-0.50  the camera flies into the card; the card's outline becomes a window that opens to full screen
+  //   0.40-0.74  the doors arrive one by one;  0.74-1  hold, so you can click
+  if (!calm) {
+    const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const seg = (p, a, b) => Math.min(1, Math.max(0, (p - a) / (b - a)));
+    let box = null, cur = 0, raf = 0, last = 0, phase = -1;
+    const PHASES = [[0, "Scroll to zoom inside"], [.02, "Zooming in…"], [.45, "You're inside"], [.72, "Pick an option, or keep scrolling"]];
+    const setGuide = p => {
+      const k = PHASES.reduce((a, [at], i) => p >= at ? i : a, 0);
+      if (k !== phase) { phase = k; guideText.textContent = PHASES[k][1]; }
+      guideBar.style.transform = `scaleX(${p.toFixed(3)})`;
+    };
+    const measure = () => { // the door opens from the demo card (desktop) or the main button (phones)
+      heroGrid.style.transform = ""; tilt.style.transform = "";
+      const src = innerWidth > 760 && visual.offsetParent ? demo : copy.querySelector(".btn.lime");
+      const r = src.getBoundingClientRect(), g = heroGrid.getBoundingClientRect(), s = scene.firstChild.getBoundingClientRect();
+      box = {vw: innerWidth, x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2, w: r.width, h: r.height,
+        ox: r.left - g.left + r.width / 2, oy: r.top - g.top + r.height / 2, rad: Math.min(26, r.height / 2)};
+    };
+    const render = p => {
+      if (p === 0) box = null; // re-measure next time, after the intro animation has settled
+      else if (!box || box.vw !== innerWidth) measure();
+      setGuide(p);
+      scene.classList.toggle("zooming", p > .003);
+      if (!box) { heroGrid.style.cssText = ""; inside.style.opacity = "0"; return; }
+      const vw = scene.firstChild.clientWidth, vh = scene.firstChild.clientHeight;
+      const e = ease(seg(p, .02, .5)), d = seg(p, .4, .74);
+      const S = Math.pow(Math.max(vw / box.w, vh / box.h) * 1.08, e); // zoom grows geometrically: feels like constant speed
+      const dx = (vw / 2 - box.x) * e, dy = (vh / 2 - box.y) * e;
+      heroGrid.style.transformOrigin = `${box.ox}px ${box.oy}px`;
+      heroGrid.style.transform = `translate(${dx}px, ${dy}px) scale(${S})`;
+      heroGrid.style.opacity = String(Math.max(0, 1 - e * 1.25));
+      hero.style.pointerEvents = e > .4 ? "none" : "";
+      // the window follows the card's (zoomed) outline, so the card itself seems to open
+      const cx = box.x + dx, cy = box.y + dy, hw = box.w * S / 2, hh = box.h * S / 2;
+      const L = Math.max(0, cx - hw), T = Math.max(0, cy - hh);
+      const sx = Math.max(.001, (Math.min(vw, cx + hw) - L) / vw), sy = Math.max(.001, (Math.min(vh, cy + hh) - T) / vh);
+      inside.style.transform = `translate(${L.toFixed(1)}px, ${T.toFixed(1)}px) scale(${sx.toFixed(5)}, ${sy.toFixed(5)})`;
+      insideView.style.transform = `scale(${(1 / sx).toFixed(5)}, ${(1 / sy).toFixed(5)}) translate(${(-L).toFixed(1)}px, ${(-T).toFixed(1)}px)`;
+      // rounded corners only while the window is small (each change re-rasterises its mask), then square
+      const rad = box.rad * S * Math.max(0, 1 - e * 3);
+      const br = rad < .5 ? "0px" : `${Math.round(rad / sx)}px / ${Math.round(rad / sy)}px`;
+      if (inside.style.borderRadius !== br) inside.style.borderRadius = br;
+      inside.style.opacity = String(Math.min(1, e * 7));
+      inside.style.pointerEvents = e > .95 ? "auto" : "none"; // "auto", not "": the stylesheet default is none
+      insideInner.style.transform = `scale(${.72 + .28 * e})`;
+      insideHead.style.opacity = String(seg(e, .08, .45)); // visible through the window while it opens
+      doors.forEach((n, i) => {
+        const t = ease(seg(d * 1.9 - i * .16, 0, 1));
+        n.style.opacity = t.toFixed(3);
+        n.style.transform = t < 1 ? `translate3d(0, ${((1 - t) * 90).toFixed(1)}px, 0) scale(${(.82 + .18 * t).toFixed(3)})` : "";
+        n.style.pointerEvents = t > .8 ? "" : "none";
+      });
+    };
+    const target = () => { const r = scene.getBoundingClientRect(); return Math.min(1, Math.max(0, -r.top / (r.height - innerHeight))); };
+    const tick = now => {
+      const dt = last ? Math.min(64, now - last) : 16.7; last = now;
+      const t = target(); cur += (t - cur) * (1 - Math.pow(.9, dt / 16.7)); // same glide at 60 Hz and 120 Hz
+      if (Math.abs(t - cur) < .0004) cur = t;
+      render(cur);
+      if (cur !== t) raf = requestAnimationFrame(tick); else { raf = 0; last = 0; }
+    };
+    fx.push(() => { if (!raf) raf = requestAnimationFrame(tick); });
+  }
 
   const tick = ["SOC 2", "ISO 27001", "GDPR", "HIPAA", "robots.txt respected", "Every fact quoted", "Agent research loop", "Buyer lookup via Hunter.io", "Google Search grounding", "Owner-inbox only"];
   const marquee = el("div", {class: "marquee", "aria-hidden": "true"}, el("div", {class: "track"}, ...[...tick, ...tick].map(t => el("span", {}, t))));
@@ -865,20 +993,6 @@ function homePage() {
       el("p", {class: "muted", style: "margin-top:12px;max-width:30em"}, "Most companies don't qualify, and that's the point. Existing Sprinto customers, competitors, late-stage giants and consumer brands are filtered out, each with a stated reason.")),
     resultsBody));
 
-  // ----- explore: where to go next
-  const tile = (n, title, text, href, cls = "", extra = {}) => el("a", {class: "tile glow " + cls, href, "data-rv": "", ...extra},
-    el("span", {class: "tn2"}, n), el("h3", {}, title), el("p", {}, text), el("span", {class: "go"}, icon("i-arrow")));
-  const reportTile = tile("02", "Latest decision report", "Why a company qualified, who to contact and why this wording, with a source behind every line.", "#app");
-  const explore = el("section", {class: "band", id: "explore", style: "padding-top:0"}, el("div", {class: "wrap"},
-    el("div", {class: "section-head"}, el("div", {class: "eyebrow", "data-rv": ""}, "Explore"), el("h2", {"data-rv": "", style: "--d:100"}, "Go deeper, ", el("em", {}, "wherever"), " you like.")),
-    el("div", {class: "tiles"},
-      tile("01", "Research companies", "Paste up to 10 domains. Watch each one get read, scored and, if it qualifies, matched to a buyer with a draft email.", "#app", "big"),
-      reportTile,
-      tile("03", "Run history", "Every past run with its verdicts, so you can reopen any company's evidence.", "#app/history"),
-      tile("04", "ICP & scoring", "The 20 criteria, the disqualifiers and who we contact, read live from docs/ICP.md.", "#app/icp"),
-      tile("05", "System & guardrails", "Services, daily quotas and every safety limit. No secrets are ever shown.", "#app/system"),
-      tile("06", "Source code", "The whole pipeline on GitHub: scraping, scoring, agent loop, email guards.", "https://github.com/anshullmishra-png/sprinto-outbound", "", {target: "_blank", rel: "noopener"}))));
-
   const cta = el("section", {class: "cta-band"}, el("div", {class: "aurora", "aria-hidden": "true"}, el("i"), el("i")), el("div", {class: "wrap"},
     el("h2", {"data-rv": ""}, "Your next qualified lead is ", el("em", {}, "one domain"), " away."),
     el("div", {"data-rv": "", style: "--d:150"}, magnet(el("a", {class: "btn lime lg", href: "#app"}, "Open the workspace", icon("i-arrow"))))));
@@ -886,7 +1000,7 @@ function homePage() {
     el("span", {}, "Sprinto Outbound · a MESA School of Business student build (Term 2, AI Case 2). Role-play outreach; no prospect is ever emailed."),
     el("a", {href: "https://github.com/anshullmishra-png/sprinto-outbound", target: "_blank", rel: "noopener"}, "Source on GitHub")));
 
-  const sections = [hero, problem, how, trust, results, explore];
+  const sections = [scene, problem, how, trust, results];
   const dotIO = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) dots.querySelectorAll("a").forEach(a => a.classList.toggle("on", a.dataset.id === e.target.id)); }),
     {rootMargin: "-50% 0px -50% 0px"});
   sections.forEach(s => dotIO.observe(s));
@@ -915,7 +1029,7 @@ function homePage() {
   }).catch(() => demo.replaceChildren(el("span", {class: "tag"}, "Example"), el("p", {class: "muted"}, "The live example couldn't load. The workspace still works.")));
 
   if (!store.get("toured")) setTimeout(() => { if (!location.hash.startsWith("#app") && scrollY < 200) tour("toured", HOME_TOUR); }, 1900);
-  return el("div", {}, top, dots, el("main", {}, hero, marquee, problem, how, trust, results, explore, cta), foot);
+  return el("div", {}, top, dots, el("main", {}, scene, marquee, problem, how, trust, results, cta), foot);
 }
 
 // ============================================================================================= workspace shell

@@ -21,11 +21,11 @@ Given a list of domains, the system runs end-to-end with no human decisions:
 why this person, why this wording) is explainable from saved artifacts.
 
 ## Owner
-- Anshull Mishra, a beginner in Python. **Explain in plain English what you did and why, and give exact
+- Agnesh, a beginner in Python. **Explain in plain English what you did and why, and give exact
   Windows PowerShell commands to run.** No jargon without a one-line explanation.
 - OS: **Windows** (PowerShell). Use `python`, `.\.venv\Scripts\Activate.ps1`, backslashes in paths you tell
   the user to type. Code itself must use `pathlib` so it is OS-independent.
-- The email is signed as role-play: "Anshull Mishra, Growth at Sprinto" (values come from `.env`).
+- The email is signed as role-play: "Agnesh, Growth at Sprinto" (values come from `.env`).
 
 ## Tech stack (decided; do not swap without asking)
 - Python 3.11+ · virtualenv in `.venv`
