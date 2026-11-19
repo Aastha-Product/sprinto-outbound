@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from outbound import PROJECT_ROOT
+from outbound import PROJECT_ROOT, verify
 from outbound.config import get_settings
 from outbound.domains import parse_domains
 from outbound.llm import LLMFatalError
@@ -90,7 +90,7 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    """Shows whether each service is configured. Never shows a secret; approved inboxes appear masked only."""
+    """Shows whether each service is configured. Never shows a secret or the owner's email."""
     s = get_settings()
     db = ping_database(s)
     usage = {"domains_today": None, "emails_today": None}
@@ -109,7 +109,6 @@ def health() -> dict:
         "hunter": "configured" if not s.missing_for("hunter") else "missing",
         "gmail": "configured" if (s.gmail_refresh_token.get_secret_value() or (PROJECT_ROOT / s.gmail_token_file).exists()) else "missing",
         "send_enabled": s.send_enabled,
-        "test_recipients": mask(s.recipients()),  # masked labels for the Send dropdown; the browser sends back an index
         "limits": {"domains_per_run": MAX_DOMAINS_PER_RUN, "runs_per_day": s.max_runs_per_day, "emails_per_day": s.max_emails_per_day,
                    "llm_calls_per_domain": s.max_llm_calls_per_domain, "agent_rounds": s.max_agent_iterations,
                    "pages_per_domain": s.max_pages_per_domain},
@@ -207,7 +206,16 @@ class StepRequest(BaseModel):
 
 class SendRequest(BaseModel):
     domain: str
-    recipient: int = 0  # index into the approved list (never an address); 0 = OWNER_EMAIL
+    email: str = ""  # a visitor inbox already verified with /api/verify; "" = the owner's inbox
+
+
+class VerifyStart(BaseModel):
+    email: str
+
+
+class VerifyCheck(BaseModel):
+    email: str
+    code: str
 
 
 @app.post("/api/runs")
@@ -259,9 +267,32 @@ def send(run_id: str, body: SendRequest, request: Request) -> dict:
     rate_limit(request)
     if body.domain not in run_domains(run_id):
         raise HTTPException(400, "That domain is not part of this run.")
-    outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions(send=True, recipient=body.recipient)).run_step(7)
+    outcome = DomainRunner(run_id, body.domain, get_settings(), get_store(), RunOptions(send=True, visitor=body.email)).run_step(7)
     return {"step": 7, "status": outcome.status, "message": mask(outcome.message), "artifact": public_artifact(outcome.artifact),
             "brief": domain_brief(run_id, body.domain)}
+
+
+@app.post("/api/verify/start")
+def verify_start(body: VerifyStart, request: Request) -> dict:
+    """Email a 6-digit code to the visitor's own inbox (all limits live in outbound/verify.py)."""
+    rate_limit(request)
+    try:
+        verify.start(body.email, get_settings(), get_store())
+    except verify.VerifyError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        raise HTTPException(502, "Couldn't send the code email. Please try again later.")
+    return {"ok": True}
+
+
+@app.post("/api/verify/check")
+def verify_check(body: VerifyCheck, request: Request) -> dict:
+    rate_limit(request)
+    try:
+        verify.check(body.email, body.code, get_store())
+    except verify.VerifyError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
 
 
 @app.get("/api/runs")

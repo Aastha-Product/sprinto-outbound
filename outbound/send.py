@@ -1,8 +1,8 @@
 """Step 7: send the email through the Gmail API, with every guardrail checked in order.
 
-The recipient is never a free-text address: callers pass an index into Settings.recipients()
-(OWNER_EMAIL first, then the TEST_RECIPIENTS the owner approved), and `assert_recipient` re-checks the
-final message against that list right before calling Gmail.
+The recipient is OWNER_EMAIL, or (website only) a visitor's own inbox that has proved ownership with an
+emailed code (outbound/verify.py). `assert_recipient` re-checks the final message right before calling Gmail.
+For visitor inboxes the prospect's address in the subject is masked.
 
 Checks, in order (the first one that applies decides the outcome):
 1. Draft flagged by guards.py           -> blocked
@@ -19,11 +19,13 @@ from __future__ import annotations
 
 import base64
 import logging
+import re
 from email.mime.text import MIMEText
 from email.utils import formataddr
 
 from outbound import PROJECT_ROOT
 from outbound.config import Settings
+from outbound import verify
 from outbound.guards import assert_recipient
 from outbound.models import SendResult
 from outbound.storage import Store
@@ -77,12 +79,13 @@ def gmail_send(msg: MIMEText, settings: Settings) -> str:
 
 
 def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str, flagged: bool,
-               settings: Settings, store: Store, send_requested: bool, sender=None, recipient: int = 0) -> SendResult:
-    """Step 7. `sender` is swappable so tests never touch Gmail. `recipient` indexes Settings.recipients() (0 = owner)."""
+               settings: Settings, store: Store, send_requested: bool, sender=None, visitor: str = "") -> SendResult:
+    """Step 7. `sender` is swappable so tests never touch Gmail. `visitor` = a verified visitor inbox ("" = owner)."""
     sender = sender or gmail_send
-    full_subject = tagged_subject(subject, poc_email)
-    allowed = settings.recipients()
-    to = allowed[recipient] if 0 <= recipient < len(allowed) else ""
+    visitor = visitor.strip()
+    to = visitor or settings.owner_email
+    # a visitor is a stranger: don't hand them the prospect's real address
+    full_subject = tagged_subject(subject, re.sub(r"^(.)[^@]*@", r"\1***@", poc_email) if visitor else poc_email)
 
     def result(status: str, reason: str, msg_id: str | None = None) -> SendResult:
         return SendResult(status=status, to=to, would_have_gone_to=poc_email, subject=full_subject, gmail_message_id=msg_id, reason=reason)
@@ -93,8 +96,8 @@ def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str
         return result("dry_run", "dry run: no --send flag / Send button, nothing was sent")
     if not settings.send_enabled:
         return result("dry_run", "SEND_ENABLED is not true in .env, nothing was sent")
-    if not to:
-        return result("blocked", "that test recipient is not on the approved list")
+    if visitor and not verify.is_verified(visitor, store):
+        return result("blocked", "that email address has not been verified with a code")
     settings.require("gmail")
     already = store.sent_in_run(run_id)
     if domain in already:
@@ -105,8 +108,8 @@ def send_email(run_id: str, domain: str, subject: str, body: str, poc_email: str
         return result("blocked", f"MAX_EMAILS_PER_DAY ({settings.max_emails_per_day}) reached")
 
     msg = build_message(full_subject, body, settings, to)
-    assert_recipient(msg["To"], allowed)  # final check, right before sending
+    assert_recipient(msg["To"], [settings.owner_email] + ([visitor] if visitor else []))  # final check, right before sending
     msg_id = sender(msg, settings)
     store.log_event("send", run_id=run_id, domain=domain, status="sent")
-    log.info("[%s] sent to approved inbox #%d (Gmail id %s)", domain, recipient, msg_id)
-    return result("sent", "sent to the owner's inbox only" if recipient == 0 else "sent to an approved test inbox only", msg_id)
+    log.info("[%s] sent to %s (Gmail id %s)", domain, "a verified visitor inbox" if visitor else "OWNER_EMAIL", msg_id)
+    return result("sent", "sent to the visitor's verified inbox only" if visitor else "sent to the owner's inbox only", msg_id)

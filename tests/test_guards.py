@@ -135,16 +135,30 @@ def test_daily_cap():
     assert "MAX_EMAILS_PER_DAY" in send(store, s, "b.io").reason
 
 
-def test_test_recipients_list_and_index():
-    s = sset(send_enabled=True, test_recipients="prof@school.edu, not-an-email, ME@example.com")
-    assert s.recipients() == ["me@example.com", "prof@school.edu"]  # owner first, invalid + duplicate dropped
-    box = []
+def test_visitor_inbox_needs_a_verified_code():
+    from outbound import verify
+
+    s, store, box = sset(send_enabled=True, gmail_refresh_token="x", gmail_client_id="x"), MemoryStore(), []
 
     def fake_sender(msg, _):
         box.append(msg)
         return "id"
 
-    r = send_email("run1", "acme.io", "Subject", "Body?", "alex@acme.io", False, s, MemoryStore(), True, sender=fake_sender, recipient=1)
-    assert r.status == "sent" and box[0]["To"] == "prof@school.edu"
-    r = send_email("run2", "acme.io", "Subject", "Body?", "alex@acme.io", False, s, MemoryStore(), True, sender=fake_sender, recipient=7)
-    assert r.status == "blocked" and len(box) == 1  # an index outside the list never sends
+    def mail(run, to):
+        return send_email(run, "acme.io", "Subject", "Body?", "alex@acme.io", False, s, store, True, sender=fake_sender, visitor=to)
+
+    assert mail("r1", "visitor@school.edu").status == "blocked" and not box  # unverified: never sent
+    verify.start("visitor@school.edu", s, store, sender=fake_sender)
+    code = box.pop()  # the code email went only to the visitor
+    assert code["To"] == "visitor@school.edu"
+    digits = "".join(ch for ch in code.get_payload(decode=True).decode() if ch.isdigit())[:6]
+    with pytest.raises(verify.VerifyError):
+        verify.check("visitor@school.edu", "000000" if digits != "000000" else "111111", store)
+    verify.check("visitor@school.edu", digits, store)
+    r = mail("r2", "visitor@school.edu")
+    assert r.status == "sent" and box[-1]["To"] == "visitor@school.edu"
+    assert "alex@acme.io" not in box[-1]["Subject"] and "a***@acme.io" in box[-1]["Subject"]  # prospect masked for visitors
+    with pytest.raises(verify.VerifyError):
+        verify.check("visitor@school.edu", digits, store)  # single-use code
+    with pytest.raises(verify.VerifyError):
+        verify.start("not-an-email", s, store, sender=fake_sender)

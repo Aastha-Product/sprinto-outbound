@@ -1,8 +1,8 @@
 """All safety checks for emails. Pure functions, easy to test (see tests/test_guards.py).
 
 `validate_draft()` returns a list of problems (empty list = the draft is safe to send).
-`assert_recipient()` is the last line of defence before Gmail: the To address must be an approved inbox
-(OWNER_EMAIL or TEST_RECIPIENTS, see Settings.recipients).
+`assert_recipient()` is the last line of defence before Gmail: the To address must be OWNER_EMAIL or a
+visitor inbox that proved ownership with a code (outbound/verify.py).
 """
 
 from __future__ import annotations
@@ -89,6 +89,6 @@ def validate_draft(draft: EmailDraft, first_name: str, evidence_urls: list[str])
 
 
 def assert_recipient(to_address: str, allowed: list[str]) -> None:
-    """Refuse to send anywhere except the approved inboxes (OWNER_EMAIL + TEST_RECIPIENTS)."""
+    """Refuse to send anywhere except the allowed inboxes (OWNER_EMAIL, or a verified visitor inbox)."""
     if to_address.strip().lower() not in {a.strip().lower() for a in allowed if a.strip()}:
         raise RecipientError("Refusing to send: the recipient is not an approved test inbox.")

@@ -28,6 +28,7 @@
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* .btn sets display, which would otherwise beat the hidden attribute */
   html { scroll-behavior: smooth; scroll-padding-top: 80px; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.6 var(--body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 90; opacity: .05;
@@ -475,8 +476,8 @@
   th { font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   td.num { text-align: right; }
   .tablewrap { overflow-x: auto; }
-  input[type=search], select { font: 400 15px var(--body); color: var(--text); background: rgba(0,0,0,.3); border: 1px solid var(--line-2); border-radius: 999px; padding: 10px 16px; }
-  input[type=search]:focus, select:focus { outline: none; border-color: rgba(200,243,107,.55); }
+  input[type=search], input[type=email], input[inputmode=numeric], select { font: 400 15px var(--body); color: var(--text); background: rgba(0,0,0,.3); border: 1px solid var(--line-2); border-radius: 999px; padding: 10px 16px; }
+  input[type=search]:focus, input[type=email]:focus, input[inputmode=numeric]:focus, select:focus { outline: none; border-color: rgba(200,243,107,.55); }
   select option { background: var(--bg-2); color: var(--text); }
   .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; color: var(--text);
            background: rgba(16,21,28,.92); border: 1px solid var(--line-2); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 20px 50px -20px #000;
@@ -1366,28 +1367,57 @@ function reportPage(runId, domain) {
         try { await navigator.clipboard.writeText(text); toast("Email copied to clipboard"); }
         catch { toast("Couldn't copy automatically. Select the text instead."); }
       };
-      const inboxes = (health && health.test_recipients) || [];
-      const pick = inboxes.length > 1 ? el("select", {"aria-label": "Send the test email to"},
-        ...inboxes.map((label, i) => el("option", {value: String(i)}, i ? label : `${label} (owner)`))) : null;
-      const sendBtn = el("button", {class: "btn sm"}, icon("i-send"), pick ? "Send test email" : "Send a test to my inbox");
+      // visitors can get the test at their own inbox after proving it with an emailed code; empty = owner's inbox
+      const saved = store.get("testInbox") || {};
+      let verified = saved.at && Date.now() - saved.at < 23 * 3600e3 ? saved.email : "";
+      const emailIn = el("input", {type: "email", value: saved.email || "", placeholder: "Your email (empty = site owner's inbox)", "aria-label": "Send the test email to"});
+      const codeIn = el("input", {type: "text", inputmode: "numeric", maxlength: "6", placeholder: "6-digit code", "aria-label": "Verification code", hidden: true});
+      const codeBtn = el("button", {class: "btn ghost sm", type: "button"}, "Email me a code");
+      const verifyBtn = el("button", {class: "btn ghost sm", type: "button", hidden: true}, "Verify");
+      const inboxNote = el("span", {class: "small muted"});
+      const sendBtn = el("button", {class: "btn sm"}, icon("i-send"), "Send test email");
+      const target = () => emailIn.value.trim();
+      const refresh = () => {
+        const v = target(), ok = v && v.toLowerCase() === (verified || "").toLowerCase();
+        codeBtn.hidden = !v || ok; sendBtn.disabled = !!v && !ok;
+        if (!v || ok) codeIn.hidden = verifyBtn.hidden = true;
+        inboxNote.textContent = !v ? "Goes to the site owner's inbox." : ok ? "✓ Verified. The test goes to this inbox." : "Verify this inbox first: we'll email you a code.";
+      };
+      emailIn.oninput = refresh;
+      codeBtn.onclick = async () => {
+        codeBtn.disabled = true;
+        try { await api("/api/verify/start", {method: "POST", body: JSON.stringify({email: target()})});
+          codeIn.hidden = verifyBtn.hidden = false; codeIn.value = ""; codeIn.focus(); toast("Code sent. Check your inbox (and spam)."); }
+        catch (e) { toast(e.message); }
+        codeBtn.disabled = false;
+      };
+      verifyBtn.onclick = async () => {
+        verifyBtn.disabled = true;
+        try { await api("/api/verify/check", {method: "POST", body: JSON.stringify({email: target(), code: codeIn.value.trim()})});
+          verified = target(); store.set("testInbox", {email: verified, at: Date.now()}); toast("Inbox verified"); refresh(); }
+        catch (e) { toast(e.message); }
+        verifyBtn.disabled = false;
+      };
+      codeIn.onkeydown = e => { if (e.key === "Enter") verifyBtn.click(); };
+      refresh();
       sendBtn.onclick = async () => {
         sendBtn.disabled = true; sendBtn.textContent = "Sending…";
-        try { const out = await api(`/api/runs/${encodeURIComponent(runId)}/send`, {method: "POST", body: JSON.stringify({domain, recipient: pick ? Number(pick.value) : 0})});
+        try { const out = await api(`/api/runs/${encodeURIComponent(runId)}/send`, {method: "POST", body: JSON.stringify({domain, email: target()})});
           if (out.artifact) r.artifacts[domain]["07_send"] = out.artifact; if (out.brief) r.briefs[domain] = out.brief;
-          toast(out.artifact && out.artifact.output && out.artifact.output.status === "sent" ? (pick ? `Test email sent to ${pick.selectedOptions[0].textContent}` : "Test email sent to your inbox") : "Not sent: " + ((out.artifact || {}).reasoning || "see details")); }
+          toast(out.artifact && out.artifact.output && out.artifact.output.status === "sent" ? `Test email sent to ${target() || "the site owner's inbox"}` : "Not sent: " + ((out.artifact || {}).reasoning || "see details")); }
         catch (e) { toast("Not sent: " + e.message); }
         route(); loadHealth();
       };
       const foot = mail.flagged ? el("div", {class: "mail-foot", style: "background:var(--red-bg);color:var(--red)"}, el("b", {}, "Can't be sent: "), (mail.problems || []).join("; "))
         : el("div", {class: "mail-foot"}, copyBtn,
-            sent && sent.status === "sent" ? el("span", {class: "pill sent"}, icon("i-check"), "Test delivered to your inbox")
-              : health && health.send_enabled ? el("span", {style: "display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center"}, pick, sendBtn) : el("span", {class: "small muted"}, "Sending is switched off on this server."),
+            sent && sent.status === "sent" ? el("span", {class: "pill sent"}, icon("i-check"), "Test sent for this company (one per run; research it again for another)")
+              : health && health.send_enabled ? el("span", {style: "display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1"}, emailIn, codeBtn, codeIn, verifyBtn, sendBtn, inboxNote) : el("span", {class: "small muted"}, "Sending is switched off on this server."),
             sent && sent.status !== "sent" ? el("span", {class: "small muted"}, sent.reason || "") : null);
       parts.push(chapter(6, "What to say", "One verified hook, one pain point, one ask. Checked against the email rules before it can be sent.",
         el("div", {class: "cards2"},
           el("div", {class: "card"}, el("div", {class: "k"}, "Intended prospect"), c ? secret(`${c.name}, ${c.title}`) : "–", el("p", {class: "small muted", style: "margin-top:8px"}, `Decision-maker at ${company}. Never emailed.`)),
           el("div", {class: "card inv"}, el("div", {class: "k"}, "Actually delivered to"),
-            el("div", {style: "font-weight:600"}, "Your own inbox"), el("p", {class: "small muted", style: "margin-top:8px"}, "Test email only. The subject starts with [TEST → prospect]."))),
+            el("div", {style: "font-weight:600"}, "Your own inbox"), el("p", {class: "small muted", style: "margin-top:8px"}, "Test email only: the site owner's inbox, or yours once verified with a code. The subject starts with [TEST → prospect]."))),
         el("div", {class: "mail"},
           el("div", {class: "mail-head"}, el("div", {class: "row"}, el("span", {}, "Subject"), el("b", {}, mail.draft.subject)),
             el("div", {class: "row"}, el("span", {}, "Checks"), mail.flagged ? el("span", {class: "pill failed"}, "Failed") : el("span", {class: "pill done"}, icon("i-check"), "All rules passed"))),
